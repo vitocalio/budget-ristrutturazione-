@@ -1,0 +1,2459 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<meta name="theme-color" content="#0f0f0f">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23375bd2'/%3E%3Cpath d='M50 80 L90 50 L130 80 L130 130 L50 130 Z' fill='%23ffffff' stroke='%23ffffff' stroke-width='4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Budget Ristrutturazione</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #f7f8fa;
+    --bg-panel: #ffffff;
+    --ink: #1a1d23;
+    --ink-soft: #5a6271;
+    --ink-faint: #a0a8b5;
+    --line: #e6e9ee;
+    --line-strong: #d0d5dd;
+    --accent: #375bd2;
+    --accent-soft: #e8edfb;
+    --good: #16a34a;
+    --good-soft: #dcfce7;
+    --warn: #d97706;
+    --warn-soft: #fef3c7;
+    --bad: #dc2626;
+    --bad-soft: #fee2e2;
+    --shadow: 0 1px 3px rgba(15,15,15,.05), 0 4px 12px rgba(15,15,15,.04);
+  }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    min-height: 100vh; min-height: 100dvh;
+  }
+
+  .app { max-width: 1100px; margin: 0 auto; padding: 0 16px 100px; }
+
+  /* Header */
+  header.app-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 0 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .logo {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo svg { width: 22px; height: 22px; fill: white; }
+  .app-title { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+
+  /* Tabs - scroll orizzontale su mobile */
+  .tabs {
+    display: flex; gap: 2px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    border: none; background: transparent;
+    padding: 10px 14px;
+    font-family: inherit; font-size: 14px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  .tab svg { width: 16px; height: 16px; }
+
+  .panel { display: none; }
+  .panel.active { display: block; animation: fade .25s; }
+  @keyframes fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+  /* Cards */
+  .card { background: var(--bg-panel); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); margin-bottom: 12px; }
+  .card-title { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+
+  /* Stats grid */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--bg-panel); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+  .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 700; margin-bottom: 4px; }
+  .stat-value { font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .stat-sub { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+
+  /* Table */
+  .table-wrap { background: var(--bg-panel); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; background: #f9fafb; color: var(--ink-faint); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th.num { text-align: right; }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .badge-good { background: var(--good-soft); color: var(--good); }
+  .badge-warn { background: var(--warn-soft); color: var(--warn); }
+  .badge-bad { background: var(--bad-soft); color: var(--bad); }
+  .badge-info { background: var(--accent-soft); color: var(--accent); }
+  .badge-neutral { background: var(--line); color: var(--ink-soft); }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border: none; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .btn:active { transform: scale(.98); }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #2a48a8; }
+  .btn-ghost { background: var(--bg-panel); color: var(--ink); border: 1px solid var(--line-strong); }
+  .btn-ghost:hover { background: var(--bg); }
+  .btn-danger { background: var(--bg-panel); color: var(--bad); border: 1px solid var(--bad-soft); }
+  .btn-danger:hover { background: var(--bad-soft); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Action links */
+  .action-link { color: var(--accent); cursor: pointer; font-weight: 700; font-size: 12px; }
+  .action-link.danger { color: var(--bad); }
+  .action-link:hover { text-decoration: underline; }
+
+  /* Header tab */
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .panel-head h2 { font-size: 18px; font-weight: 700; margin: 0; }
+
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(15,15,15,.5); display: none; z-index: 200; align-items: center; justify-content: center; padding: 16px; }
+  .modal-bg.open { display: flex; animation: fade .2s; }
+  .modal { background: var(--bg); border-radius: 16px; max-width: 580px; width: 100%; max-height: 92vh; max-height: 92dvh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+  .modal-head { position: sticky; top: 0; background: var(--bg); padding: 16px 20px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; z-index: 1; }
+  .modal-title { font-size: 16px; font-weight: 700; margin: 0; }
+  .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--ink-soft); padding: 0 4px; line-height: 1; }
+  .modal-body { padding: 16px 20px; }
+  .modal-foot { position: sticky; bottom: 0; background: var(--bg); padding: 14px 20px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .modal-foot .btn-row { display: flex; gap: 8px; }
+
+  /* Form */
+  .field { margin-bottom: 14px; }
+  .field-label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg-panel); font-family: inherit; font-size: 14px; color: var(--ink); -webkit-appearance: none; appearance: none; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .field-hint { font-size: 11px; color: var(--ink-faint); margin-top: 4px; }
+  .field-hint.live { color: var(--accent); font-weight: 700; padding: 8px 10px; background: var(--accent-soft); border-radius: 6px; margin-top: 6px; }
+  .field-hint.warn { color: var(--bad); font-weight: 700; padding: 8px 10px; background: var(--bad-soft); border-radius: 6px; margin-top: 6px; }
+
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-panel); border: 1px solid var(--line-strong); border-radius: 8px; margin-bottom: 12px; cursor: pointer; user-select: none; }
+  .check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .check-row label { flex: 1; cursor: pointer; font-size: 14px; }
+
+  /* Beneficiari rows in pagamento */
+  .ben-rows { margin-bottom: 8px; }
+  .ben-row { display: grid; grid-template-columns: 1fr 90px 30px; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .ben-row select, .ben-row input { padding: 8px 10px; font-size: 13px; }
+  .ben-row input { text-align: right; }
+  .ben-del { background: none; border: none; color: var(--ink-faint); font-size: 18px; cursor: pointer; padding: 0; }
+  .ben-add { width: 100%; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 6px; background: transparent; font-family: inherit; font-size: 12px; color: var(--ink-soft); cursor: pointer; }
+  .ben-total { font-size: 11px; color: var(--ink-faint); text-align: right; margin-top: 4px; }
+  .ben-total.bad { color: var(--bad); font-weight: 700; }
+
+  /* Attachments */
+  .att-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .att-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+  .att-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .att-kind { padding: 2px 6px; background: var(--accent-soft); color: var(--accent); border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .att-actions { display: flex; gap: 4px; }
+  .att-icon-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; color: var(--ink-soft); font-size: 14px; }
+  .att-add { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .att-thumb { width: 26px; height: 32px; border: 1px solid var(--line); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; background: white; font-size: 8px; color: var(--ink-faint); margin-right: 4px; cursor: pointer; }
+  .att-thumb.has { background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%); }
+
+  /* Filters */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-bar input, .filter-bar select { padding: 7px 10px; font-size: 13px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg-panel); }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px 20px; color: var(--ink-faint); }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: .5; }
+
+  /* Settings sections */
+  .setting-block { background: var(--bg-panel); border-radius: 12px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .setting-block h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+  .setting-block p { font-size: 13px; color: var(--ink-soft); margin: 0 0 12px; line-height: 1.45; }
+
+  /* Progress bar */
+  .progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s; }
+  .progress-fill.warn { background: var(--warn); }
+  .progress-fill.bad { background: var(--bad); }
+
+  /* Mobile adjustments */
+  @media (max-width: 700px) {
+    .app { padding: 0 12px 100px; }
+    .field-row, .field-row-3 { grid-template-columns: 1fr; }
+    .modal { border-radius: 16px 16px 0 0; max-height: 96vh; align-self: flex-end; }
+    .modal-bg { align-items: flex-end; padding: 0; }
+    .stat-value { font-size: 18px; }
+    th, td { padding: 8px 8px; font-size: 12px; }
+  }
+
+  /* Toast */
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: white; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; z-index: 500; box-shadow: 0 8px 24px rgba(0,0,0,.2); animation: slidedown .3s; }
+  @keyframes slidedown { from { transform: translateX(-50%) translateY(-30px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+
+  /* Loading */
+  .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--ink-faint); font-size: 13px; }
+
+  /* === CHART STYLES === */
+  /* Bar chart orizzontale (per categoria/fornitore) */
+  .chart-h { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+  .chart-h-row { display: grid; grid-template-columns: minmax(120px, 30%) 1fr auto; gap: 12px; align-items: center; font-size: 13px; }
+  .chart-h-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+  .chart-h-bar-wrap { position: relative; height: 24px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+  .chart-h-bar { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); border-radius: 4px; transition: width .5s; }
+  .chart-h-bar.over { background: var(--bad); }
+  .chart-h-bar-budget { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .4; }
+  .chart-h-value { font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap; font-size: 12px; }
+  .chart-h-value-sub { color: var(--ink-faint); font-size: 11px; font-weight: 400; }
+
+  /* Bar chart verticale (timeline mensile) */
+  .chart-v { display: flex; align-items: flex-end; gap: 4px; height: 220px; padding: 14px 4px 6px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); position: relative; overflow-x: auto; }
+  .chart-v::-webkit-scrollbar { height: 6px; }
+  .chart-v-col { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 38px; flex-shrink: 0; }
+  .chart-v-bar-stack { width: 100%; height: 100%; display: flex; flex-direction: column-reverse; justify-content: flex-start; align-items: stretch; position: relative; }
+  .chart-v-bar { width: 100%; min-height: 1px; transition: all .4s; cursor: pointer; }
+  .chart-v-bar.pagato { background: var(--good); }
+  .chart-v-bar.da-pagare { background: var(--bad); }
+  .chart-v-bar.preventivo { background: var(--warn); }
+  .chart-v-bar:hover { opacity: .8; }
+  .chart-v-label { font-size: 10px; color: var(--ink-faint); white-space: nowrap; transform: rotate(-45deg); transform-origin: top left; margin-top: 14px; height: 30px; font-weight: 700; }
+  .chart-v-total { font-size: 9px; color: var(--ink-soft); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .chart-v-empty { display: flex; align-items: center; justify-content: center; width: 100%; color: var(--ink-faint); font-size: 12px; }
+
+  /* Legend */
+  .chart-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .chart-legend-item { display: flex; align-items: center; gap: 6px; }
+  .chart-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  .chart-legend-dot.pagato { background: var(--good); }
+  .chart-legend-dot.da-pagare { background: var(--bad); }
+  .chart-legend-dot.preventivo { background: var(--warn); }
+
+  /* Detrazioni - cards beneficiario */
+  .ben-card { background: var(--bg-panel); border-radius: 12px; padding: 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .ben-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .ben-card-name { font-size: 16px; font-weight: 700; margin: 0; }
+  .ben-card-cf { font-size: 11px; color: var(--ink-faint); font-weight: 400; }
+  .ben-irpef-badge { background: var(--accent-soft); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  .ben-irpef-badge.missing { background: var(--warn-soft); color: var(--warn); }
+
+  .ben-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .ben-stat { padding: 10px 12px; background: var(--bg); border-radius: 8px; }
+  .ben-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-faint); font-weight: 700; margin-bottom: 4px; }
+  .ben-stat-val { font-size: 17px; font-weight: 700; line-height: 1.1; }
+  .ben-stat-sub { font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
+
+  .incapienza-alert { background: var(--bad-soft); color: var(--bad); border-left: 4px solid var(--bad); padding: 12px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
+  .incapienza-alert strong { display: block; margin-bottom: 4px; }
+  .capienza-ok { background: var(--good-soft); color: var(--good); border-left: 4px solid var(--good); padding: 12px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
+
+  .breakdown-table { width: 100%; font-size: 12px; }
+  .breakdown-table th { padding: 8px 10px; }
+  .breakdown-table td { padding: 8px 10px; }
+
+  /* Mobile chart adjustments */
+  @media (max-width: 700px) {
+    .chart-h-row { grid-template-columns: minmax(80px, 35%) 1fr auto; gap: 8px; font-size: 12px; }
+    .chart-v { height: 180px; }
+    .chart-v-col { min-width: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app-header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 3 L4 9 V20 H9 V14 H15 V20 H20 V9 Z"/></svg>
+    </div>
+    <h1 class="app-title">Budget Ristrutturazione</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>Dashboard</button>
+    <button class="tab" data-tab="categorie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Categorie</button>
+    <button class="tab" data-tab="fornitori"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg>Fornitori</button>
+    <button class="tab" data-tab="beneficiari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v2"/></svg>Beneficiari</button>
+    <button class="tab" data-tab="pagamenti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Pagamenti</button>
+    <button class="tab" data-tab="detrazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>Detrazioni</button>
+    <button class="tab" data-tab="impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Impostazioni</button>
+  </div>
+
+  <!-- DASHBOARD (Step 1: solo stats sintetiche; grafici grandi e timeline arrivano in Step 2) -->
+  <div class="panel active" id="panel-dashboard">
+    <div id="dash-content"><div class="loader">Caricamento…</div></div>
+  </div>
+
+  <!-- CATEGORIE -->
+  <div class="panel" id="panel-categorie">
+    <div class="panel-head">
+      <h2>Categorie</h2>
+      <button class="btn btn-primary" onclick="openCategoryModal()">+ Nuova categoria</button>
+    </div>
+    <div id="categories-list"></div>
+  </div>
+
+  <!-- FORNITORI -->
+  <div class="panel" id="panel-fornitori">
+    <div class="panel-head">
+      <h2>Fornitori</h2>
+      <button class="btn btn-primary" onclick="openSupplierModal()">+ Nuovo fornitore</button>
+    </div>
+    <div id="suppliers-list"></div>
+  </div>
+
+  <!-- BENEFICIARI -->
+  <div class="panel" id="panel-beneficiari">
+    <div class="panel-head">
+      <h2>Beneficiari detrazioni</h2>
+      <button class="btn btn-primary" onclick="openBeneficiaryModal()">+ Nuovo beneficiario</button>
+    </div>
+    <div id="beneficiaries-list"></div>
+  </div>
+
+  <!-- PAGAMENTI -->
+  <div class="panel" id="panel-pagamenti">
+    <div class="panel-head">
+      <h2>Pagamenti</h2>
+      <button class="btn btn-primary" onclick="openPaymentModal()">+ Nuovo pagamento</button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="filter-search" placeholder="Cerca…" oninput="renderPayments()">
+      <select id="filter-supplier" onchange="renderPayments()"><option value="">Tutti i fornitori</option></select>
+      <select id="filter-category" onchange="renderPayments()"><option value="">Tutte le categorie</option></select>
+      <select id="filter-status" onchange="renderPayments()"><option value="">Tutti gli stati</option><option value="pagato">Pagato</option><option value="da-pagare">Da pagare</option><option value="preventivo">Preventivo</option></select>
+      <select id="filter-detraz" onchange="renderPayments()"><option value="">Tutte le detrazioni</option><option value="da-assegnare">Da assegnare</option><option value="nessuna">Nessuna</option></select>
+    </div>
+    <div id="payments-table"></div>
+  </div>
+
+  <!-- DETRAZIONI -->
+  <div class="panel" id="panel-detrazioni">
+    <div id="detrazioni-content"><div class="loader">Caricamento…</div></div>
+  </div>
+
+  <!-- IMPOSTAZIONI -->
+  <div class="panel" id="panel-impostazioni">
+    <div class="setting-block">
+      <h3>Tipi di detrazione</h3>
+      <p>Aliquote bonus fiscali. La detrazione si applica sull'importo lordo (IVA inclusa).</p>
+      <div id="deduction-types-list"></div>
+      <button class="btn btn-ghost" onclick="openDeductionTypeModal()" style="margin-top:8px;">+ Nuovo tipo</button>
+    </div>
+    <div class="setting-block">
+      <h3>Export per commercialista</h3>
+      <p>Genera un archivio ZIP con anagrafica fornitori, pagamenti CSV e tutti gli allegati PDF organizzati per fornitore. Pronto per essere consegnato al commercialista.</p>
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Periodo</label>
+          <select id="exp-period" onchange="onExpPeriodChange()">
+            <option value="all">Tutto</option>
+            <option value="current" selected>Anno corrente</option>
+            <option value="previous">Anno precedente</option>
+            <option value="custom">Personalizzato</option>
+          </select>
+        </div>
+        <div class="field" id="exp-custom-wrap" style="display:none;">
+          <label class="field-label">Da → A</label>
+          <div style="display:flex; gap:6px;">
+            <input type="date" id="exp-from" style="flex:1;">
+            <input type="date" id="exp-to" style="flex:1;">
+          </div>
+        </div>
+      </div>
+      <div class="check-row" onclick="if(event.target.tagName!=='INPUT') document.getElementById('exp-detraibili').click()">
+        <input type="checkbox" id="exp-detraibili" onchange="updateExpPreview()">
+        <label for="exp-detraibili">Solo pagamenti detraibili (esclude "Da assegnare" e "Nessuna detrazione")</label>
+      </div>
+      <div class="check-row" onclick="if(event.target.tagName!=='INPUT') document.getElementById('exp-pagati').click()">
+        <input type="checkbox" id="exp-pagati" checked onchange="updateExpPreview()">
+        <label for="exp-pagati">Solo pagamenti effettivamente pagati (esclude preventivi e da pagare)</label>
+      </div>
+      <div id="exp-preview" style="font-size:13px; color:var(--ink-soft); padding:10px 12px; background:var(--bg); border-radius:6px; margin-bottom:12px;"></div>
+      <button class="btn btn-primary" onclick="exportZIP()">Genera ZIP commercialista</button>
+    </div>
+
+    <div class="setting-block">
+      <h3>Backup dati</h3>
+      <p>Esporta un file JSON con tutti i tuoi dati (categorie, fornitori, pagamenti, allegati PDF, beneficiari). Salvalo regolarmente in iCloud Drive.</p>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="exportJSON()">Esporta JSON</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">Importa JSON</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+    </div>
+    <div class="setting-block">
+      <h3>Storage</h3>
+      <p id="storage-info">Calcolo spazio…</p>
+    </div>
+    <div class="setting-block">
+      <h3>Cancella tutto</h3>
+      <p>Elimina tutti i dati dall'app. Irreversibile.</p>
+      <button class="btn btn-danger" onclick="resetAll()">Cancella tutto</button>
+    </div>
+    <div class="setting-block" style="text-align:center; background:transparent; box-shadow:none;">
+      <p style="font-size:11px; color:var(--ink-faint); margin:0;">Budget Ristrutturazione · v2.0 · IndexedDB</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Category modal -->
+<div class="modal-bg" id="modal-category">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="cat-modal-title">Nuova categoria</h3>
+      <button class="modal-close" onclick="closeModal('modal-category')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Nome</label><input type="text" id="cat-name"></div>
+      <div class="field"><label class="field-label">Budget previsto (€)</label><input type="number" id="cat-budget" inputmode="decimal" step="0.01"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="cat-delete-btn" style="display:none;" onclick="deleteCategory()">Elimina</button>
+      <div class="btn-row" style="margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-category')">Annulla</button>
+        <button class="btn btn-primary" onclick="saveCategory()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Supplier modal -->
+<div class="modal-bg" id="modal-supplier">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="sup-modal-title">Nuovo fornitore</h3>
+      <button class="modal-close" onclick="closeModal('modal-supplier')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Ragione sociale</label><input type="text" id="sup-name"></div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">P.IVA</label><input type="text" id="sup-piva"></div>
+        <div class="field"><label class="field-label">Codice fiscale</label><input type="text" id="sup-cf"></div>
+      </div>
+      <div class="field"><label class="field-label">Indirizzo</label><input type="text" id="sup-address"></div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Email</label><input type="email" id="sup-email"></div>
+        <div class="field"><label class="field-label">Telefono</label><input type="tel" id="sup-phone"></div>
+      </div>
+      <div class="field"><label class="field-label">IBAN</label><input type="text" id="sup-iban"></div>
+      <div class="field"><label class="field-label">Referente</label><input type="text" id="sup-contact"></div>
+      <div class="field"><label class="field-label">IVA default (%)</label><input type="number" id="sup-iva" inputmode="decimal" step="0.01" min="0" max="100" value="22"></div>
+      <div class="field"><label class="field-label">Note</label><textarea id="sup-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="sup-delete-btn" style="display:none;" onclick="deleteSupplier()">Elimina</button>
+      <div class="btn-row" style="margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-supplier')">Annulla</button>
+        <button class="btn btn-primary" onclick="saveSupplier()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Beneficiary modal -->
+<div class="modal-bg" id="modal-beneficiary">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="ben-modal-title">Nuovo beneficiario</h3>
+      <button class="modal-close" onclick="closeModal('modal-beneficiary')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Nome e cognome</label><input type="text" id="ben-name"></div>
+      <div class="field"><label class="field-label">Codice fiscale</label><input type="text" id="ben-cf"></div>
+      <div class="field"><label class="field-label">Quota proprietà immobile (%)</label><input type="number" id="ben-quota" inputmode="decimal" step="0.01" min="0" max="100"></div>
+      <div class="field">
+        <label class="field-label">IRPEF annua dovuta (€)</label>
+        <input type="number" id="ben-irpef" inputmode="decimal" step="0.01" min="0">
+        <div class="field-hint">Serve per calcolare il risparmio fiscale annuo recuperabile sui 10 anni di detrazione.</div>
+      </div>
+      <div class="field">
+        <label class="field-label">Massimali spesa detraibile annuale (€)</label>
+        <div class="field-hint" style="margin-bottom:8px;">Indicazione informativa per anno. Lascia vuoto se non vuoi tracciare il massimale di un certo bonus.</div>
+        <div id="ben-massimali"></div>
+      </div>
+      <div class="field"><label class="field-label">Note</label><textarea id="ben-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="ben-delete-btn" style="display:none;" onclick="deleteBeneficiary()">Elimina</button>
+      <div class="btn-row" style="margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-beneficiary')">Annulla</button>
+        <button class="btn btn-primary" onclick="saveBeneficiary()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DeductionType modal -->
+<div class="modal-bg" id="modal-dedtype">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="dt-modal-title">Nuovo tipo detrazione</h3>
+      <button class="modal-close" onclick="closeModal('modal-dedtype')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field"><label class="field-label">Nome</label><input type="text" id="dt-name" placeholder="es. Bonus ristrutturazione 50%"></div>
+      <div class="field"><label class="field-label">Aliquota detrazione (%)</label><input type="number" id="dt-rate" inputmode="decimal" step="0.01" min="0" max="100"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="dt-delete-btn" style="display:none;" onclick="deleteDeductionType()">Elimina</button>
+      <div class="btn-row" style="margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-dedtype')">Annulla</button>
+        <button class="btn btn-primary" onclick="saveDeductionType()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Payment modal -->
+<div class="modal-bg" id="modal-payment">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 class="modal-title" id="pay-modal-title">Nuovo pagamento</h3>
+      <button class="modal-close" onclick="closeModal('modal-payment')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row">
+        <div class="field"><label class="field-label">Data</label><input type="date" id="pay-date"></div>
+        <div class="field"><label class="field-label">Stato</label><select id="pay-status">
+          <option value="pagato">Pagato</option>
+          <option value="da-pagare">Da pagare</option>
+          <option value="preventivo">Preventivo</option>
+        </select></div>
+      </div>
+      <div class="field"><label class="field-label">Categoria</label><select id="pay-category"></select></div>
+      <div class="field"><label class="field-label">Fornitore</label><select id="pay-supplier"></select></div>
+      <div class="field"><label class="field-label">Descrizione</label><input type="text" id="pay-description" placeholder="es. Acconto 1, SAL gennaio…"></div>
+      <div class="field-row">
+        <div class="field"><label class="field-label">Imponibile (€)</label><input type="number" id="pay-imponibile" inputmode="decimal" step="0.01" oninput="updatePayPreview()"></div>
+        <div class="field"><label class="field-label">IVA (%)</label><input type="number" id="pay-iva" inputmode="decimal" step="0.01" min="0" max="100" oninput="updatePayPreview()"></div>
+      </div>
+      <div class="field-hint live" id="pay-preview">Lordo: € 0,00</div>
+      <div class="field"><label class="field-label">Numero fattura</label><input type="text" id="pay-invoice"></div>
+
+      <div class="field" style="margin-top:18px; padding-top:14px; border-top: 1px solid var(--line);">
+        <label class="field-label">Tipo detrazione</label>
+        <select id="pay-deduction-type" onchange="updatePayPreview()"></select>
+      </div>
+
+      <div id="pay-detraz-section">
+        <label class="field-label">Beneficiari e quote (%)</label>
+        <div class="ben-rows" id="pay-ben-rows"></div>
+        <button type="button" class="ben-add" onclick="addPayBenRow()">+ Aggiungi beneficiario</button>
+        <div class="ben-total" id="pay-ben-total">Totale: 0%</div>
+
+        <div class="check-row" style="margin-top:12px;" onclick="if(event.target.tagName!=='INPUT') document.getElementById('pay-bonifico').click()">
+          <input type="checkbox" id="pay-bonifico" onchange="updateBonificoWarn()">
+          <label for="pay-bonifico">Bonifico parlante effettuato</label>
+        </div>
+        <div class="field-hint warn" id="pay-bonifico-warn" style="display:none;">⚠ Senza bonifico parlante la detrazione viene persa per quasi tutti i bonus edilizi.</div>
+
+        <div class="field-hint live" id="pay-detraz-preview" style="display:none;">Detrazione: € 0,00</div>
+      </div>
+
+      <div class="field" style="margin-top:14px;">
+        <label class="field-label">Allegati (fattura, bonifico, ecc.)</label>
+        <div id="pay-att-list" class="att-list"></div>
+        <div class="att-add">
+          <input type="file" id="pay-att-file" multiple accept="application/pdf,image/*" onchange="onAttFileSelected(event)" style="font-size:12px;">
+        </div>
+      </div>
+
+      <div class="field"><label class="field-label">Note</label><textarea id="pay-note" rows="2"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="pay-delete-btn" style="display:none;" onclick="deletePayment()">Elimina</button>
+      <div class="btn-row" style="margin-left:auto;">
+        <button class="btn btn-ghost" onclick="closeModal('modal-payment')">Annulla</button>
+        <button class="btn btn-primary" onclick="savePayment()">Salva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =========================================================================
+// INDEXEDDB LAYER
+// =========================================================================
+const DB_NAME = 'budget-ristrutturazione';
+const DB_VERSION = 1;
+const STORES = ['categories', 'suppliers', 'beneficiaries', 'payments', 'deductionTypes', 'meta'];
+
+let db = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const d = e.target.result;
+      STORES.forEach(s => {
+        if (!d.objectStoreNames.contains(s)) {
+          d.createObjectStore(s, { keyPath: 'id' });
+        }
+      });
+    };
+    req.onsuccess = (e) => { db = e.target.result; resolve(db); };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+function tx(stores, mode = 'readonly') { return db.transaction(stores, mode); }
+
+function getAll(store) {
+  return new Promise((resolve, reject) => {
+    const req = tx([store]).objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function get(store, id) {
+  return new Promise((resolve, reject) => {
+    const req = tx([store]).objectStore(store).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function put(store, obj) {
+  return new Promise((resolve, reject) => {
+    const t = tx([store], 'readwrite');
+    t.objectStore(store).put(obj);
+    t.oncomplete = () => resolve(obj);
+    t.onerror = () => reject(t.error);
+  });
+}
+
+function del(store, id) {
+  return new Promise((resolve, reject) => {
+    const t = tx([store], 'readwrite');
+    t.objectStore(store).delete(id);
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+}
+
+function clearStore(store) {
+  return new Promise((resolve, reject) => {
+    const t = tx([store], 'readwrite');
+    t.objectStore(store).clear();
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+}
+
+async function bulkPut(store, items) {
+  if (!items || !items.length) return;
+  return new Promise((resolve, reject) => {
+    const t = tx([store], 'readwrite');
+    const os = t.objectStore(store);
+    items.forEach(it => os.put(it));
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+  });
+}
+
+// =========================================================================
+// STATE (in-memory cache)
+// =========================================================================
+let state = {
+  categories: [],
+  suppliers: [],
+  beneficiaries: [],
+  payments: [],
+  deductionTypes: []
+};
+
+const DEFAULT_DEDUCTION_TYPES = [
+  { id: 'dt_da_assegnare', name: 'Da assegnare', rate: 0, isPlaceholder: true },
+  { id: 'dt_nessuna', name: 'Nessuna detrazione', rate: 0, isNone: true },
+  { id: 'dt_ristr50', name: 'Bonus ristrutturazione 50%', rate: 50 },
+  { id: 'dt_eco50', name: 'Ecobonus 50%', rate: 50 },
+  { id: 'dt_eco65', name: 'Ecobonus 65%', rate: 65 },
+  { id: 'dt_eco75', name: 'Ecobonus 75%', rate: 75 },
+  { id: 'dt_sisma', name: 'Sismabonus', rate: 70 },
+  { id: 'dt_mobili', name: 'Bonus mobili 50%', rate: 50 },
+  { id: 'dt_barr75', name: 'Bonus barriere arch. 75%', rate: 75 }
+];
+
+async function loadState() {
+  const [cats, sups, bens, pays, dts] = await Promise.all([
+    getAll('categories'), getAll('suppliers'), getAll('beneficiaries'), getAll('payments'), getAll('deductionTypes')
+  ]);
+  state.categories = cats;
+  state.suppliers = sups;
+  state.beneficiaries = bens;
+  state.payments = pays;
+  if (dts.length === 0) {
+    // Inizializza con tipi default
+    await bulkPut('deductionTypes', DEFAULT_DEDUCTION_TYPES);
+    state.deductionTypes = DEFAULT_DEDUCTION_TYPES.slice();
+  } else {
+    state.deductionTypes = dts;
+  }
+}
+
+// =========================================================================
+// UTILS
+// =========================================================================
+const uid = (prefix='') => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const euro = (n, dec=2) => '€ ' + (Number(n)||0).toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+const euroR = (n) => '€ ' + Math.round(Number(n)||0).toLocaleString('it-IT');
+const fmtDate = (iso) => { if (!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const escapeHtml = s => String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const grossOf = p => (Number(p.imponibile)||0) * (1 + (Number(p.ivaPct)||0)/100);
+const ivaOf = p => (Number(p.imponibile)||0) * ((Number(p.ivaPct)||0)/100);
+
+function getDeductionType(id) {
+  return state.deductionTypes.find(t => t.id === id);
+}
+
+function isDeductiblePayment(p) {
+  if (!p.deductionTypeId) return false;
+  const dt = getDeductionType(p.deductionTypeId);
+  if (!dt) return false;
+  if (dt.isNone || dt.isPlaceholder) return false;
+  return dt.rate > 0;
+}
+
+function paymentDeduction(p) {
+  if (!isDeductiblePayment(p)) return 0;
+  const dt = getDeductionType(p.deductionTypeId);
+  return grossOf(p) * (dt.rate / 100);
+}
+
+function showToast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+// =========================================================================
+// TABS
+// =========================================================================
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    renderAll();
+  });
+});
+
+// =========================================================================
+// RENDER
+// =========================================================================
+function renderAll() {
+  renderDashboard();
+  renderCategories();
+  renderSuppliers();
+  renderBeneficiaries();
+  renderPayments();
+  renderDetrazioni();
+  renderDeductionTypes();
+  renderStorageInfo();
+  updateExpPreview();
+}
+
+// ---------- DASHBOARD (Step 2: stats + grafici grandi + timeline mensile) ----------
+function renderDashboard() {
+  const el = document.getElementById('dash-content');
+
+  const totBudget = state.categories.reduce((s,c) => s + (Number(c.budget)||0), 0);
+  const totImp = state.payments.reduce((s,p) => s + (Number(p.imponibile)||0), 0);
+  const totIva = state.payments.reduce((s,p) => s + ivaOf(p), 0);
+  const totLordo = totImp + totIva;
+  const totPagato = state.payments.filter(p => p.status === 'pagato').reduce((s,p) => s + grossOf(p), 0);
+  const totDaPagare = state.payments.filter(p => p.status === 'da-pagare').reduce((s,p) => s + grossOf(p), 0);
+  const totPrev = state.payments.filter(p => p.status === 'preventivo').reduce((s,p) => s + grossOf(p), 0);
+  const totDetraz = state.payments.reduce((s,p) => s + paymentDeduction(p), 0);
+
+  const usatoVsBudget = totBudget > 0 ? (totImp / totBudget) * 100 : 0;
+  let progClass = '';
+  if (usatoVsBudget > 100) progClass = 'bad';
+  else if (usatoVsBudget > 90) progClass = 'warn';
+
+  const daAssegnare = state.payments.filter(p => !p.deductionTypeId || p.deductionTypeId === 'dt_da_assegnare').length;
+  const senzaBonifico = state.payments.filter(p => isDeductiblePayment(p) && !p.bonificoParlante).length;
+
+  let html = `
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Budget totale</div>
+        <div class="stat-value">${euroR(totBudget)}</div>
+        <div class="stat-sub">${state.categories.length} categorie</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Speso (imponibile)</div>
+        <div class="stat-value">${euroR(totImp)}</div>
+        <div class="stat-sub">${state.payments.length} pagamenti</div>
+        <div class="progress"><div class="progress-fill ${progClass}" style="width:${Math.min(usatoVsBudget, 100)}%"></div></div>
+        <div class="stat-sub" style="margin-top:4px;">${usatoVsBudget.toFixed(1)}% del budget</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">IVA totale</div>
+        <div class="stat-value" style="color:var(--accent);">${euroR(totIva)}</div>
+        <div class="stat-sub">Lordo: ${euroR(totLordo)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Detrazione recuperabile</div>
+        <div class="stat-value" style="color:var(--good);">${euroR(totDetraz)}</div>
+        <div class="stat-sub">${state.payments.filter(isDeductiblePayment).length} pagamenti detraibili</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Pagato</div>
+        <div class="stat-value" style="color:var(--good);">${euroR(totPagato)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Da pagare</div>
+        <div class="stat-value" style="color:var(--bad);">${euroR(totDaPagare)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Preventivi</div>
+        <div class="stat-value" style="color:var(--warn);">${euroR(totPrev)}</div>
+      </div>
+    </div>
+  `;
+
+  // Alert
+  if (daAssegnare > 0 || senzaBonifico > 0) {
+    html += `<div class="card" style="background: var(--warn-soft); border-left: 4px solid var(--warn);">
+      <div class="card-title" style="color: var(--warn);">⚠ Attenzione</div>`;
+    if (daAssegnare > 0) html += `<div style="font-size:13px; margin-bottom:6px;"><strong>${daAssegnare} pagamento/i</strong> con tipo detrazione "Da assegnare". Aprili e seleziona il bonus corretto.</div>`;
+    if (senzaBonifico > 0) html += `<div style="font-size:13px;"><strong>${senzaBonifico} pagamento/i detraibili</strong> senza bonifico parlante confermato.</div>`;
+    html += `</div>`;
+  }
+
+  // ===== GRAFICO TIMELINE MENSILE =====
+  html += renderMonthlyChart();
+
+  // ===== GRAFICO PER CATEGORIA =====
+  html += renderCategoryChart();
+
+  // ===== GRAFICO PER FORNITORE =====
+  html += renderSupplierChart();
+
+  el.innerHTML = html;
+}
+
+function renderMonthlyChart() {
+  if (state.payments.length === 0) return '';
+
+  // Aggrega per mese (YYYY-MM)
+  const months = {};
+  for (const p of state.payments) {
+    if (!p.date) continue;
+    const ym = p.date.slice(0, 7);
+    if (!months[ym]) months[ym] = { pagato: 0, 'da-pagare': 0, preventivo: 0 };
+    const status = p.status || 'pagato';
+    months[ym][status] = (months[ym][status] || 0) + (Number(p.imponibile)||0);
+  }
+
+  const sortedKeys = Object.keys(months).sort();
+  if (sortedKeys.length === 0) return '';
+
+  // Trova range completo: dal primo all'ultimo, riempi i mesi vuoti
+  const [firstY, firstM] = sortedKeys[0].split('-').map(Number);
+  const [lastY, lastM] = sortedKeys[sortedKeys.length-1].split('-').map(Number);
+  const allKeys = [];
+  let y = firstY, m = firstM;
+  while (y < lastY || (y === lastY && m <= lastM)) {
+    const k = `${y}-${String(m).padStart(2,'0')}`;
+    allKeys.push(k);
+    if (!months[k]) months[k] = { pagato: 0, 'da-pagare': 0, preventivo: 0 };
+    m++;
+    if (m > 12) { m = 1; y++; }
+    if (allKeys.length > 60) break; // safety
+  }
+
+  // Trova max per scaling
+  const maxVal = Math.max(...allKeys.map(k => months[k].pagato + months[k]['da-pagare'] + months[k].preventivo)) || 1;
+
+  const monthNames = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+
+  let cols = '';
+  for (const k of allKeys) {
+    const [yy, mm] = k.split('-').map(Number);
+    const data = months[k];
+    const tot = data.pagato + data['da-pagare'] + data.preventivo;
+    const hPag = (data.pagato / maxVal) * 100;
+    const hDa = (data['da-pagare'] / maxVal) * 100;
+    const hPrev = (data.preventivo / maxVal) * 100;
+    const totLabel = tot > 0 ? (tot >= 1000 ? Math.round(tot/1000) + 'k' : Math.round(tot)) : '';
+    const label = `${monthNames[mm-1]} '${String(yy).slice(2)}`;
+    const tooltip = `${label}\nPagato: ${euroR(data.pagato)}\nDa pagare: ${euroR(data['da-pagare'])}\nPreventivi: ${euroR(data.preventivo)}\nTotale: ${euroR(tot)}`;
+    cols += `
+      <div class="chart-v-col">
+        <div class="chart-v-total">${totLabel}</div>
+        <div class="chart-v-bar-stack" style="height: 160px;" title="${escapeHtml(tooltip)}">
+          ${data.preventivo > 0 ? `<div class="chart-v-bar preventivo" style="height:${hPrev}%"></div>` : ''}
+          ${data['da-pagare'] > 0 ? `<div class="chart-v-bar da-pagare" style="height:${hDa}%"></div>` : ''}
+          ${data.pagato > 0 ? `<div class="chart-v-bar pagato" style="height:${hPag}%"></div>` : ''}
+        </div>
+        <div class="chart-v-label">${label}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-title">Spese per mese (imponibile)</div>
+      <div class="chart-v">${cols}</div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot pagato"></div> Pagato</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot da-pagare"></div> Da pagare</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot preventivo"></div> Preventivo</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCategoryChart() {
+  if (state.categories.length === 0) return '';
+  const items = state.categories.map(c => {
+    const speso = state.payments.filter(p => p.categoryId === c.id).reduce((s,p) => s + (Number(p.imponibile)||0), 0);
+    return { name: c.name, budget: Number(c.budget)||0, speso, pct: c.budget > 0 ? (speso / c.budget) * 100 : 0 };
+  }).sort((a,b) => b.speso - a.speso);
+
+  // Max è il maggiore tra budget e speso, su tutte le categorie
+  const maxVal = Math.max(...items.map(x => Math.max(x.budget, x.speso))) || 1;
+
+  let rows = '';
+  for (const it of items) {
+    const wSpeso = (it.speso / maxVal) * 100;
+    const wBudget = (it.budget / maxVal) * 100;
+    const over = it.speso > it.budget && it.budget > 0;
+    rows += `
+      <div class="chart-h-row">
+        <div class="chart-h-label" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</div>
+        <div class="chart-h-bar-wrap">
+          <div class="chart-h-bar ${over?'over':''}" style="width:${wSpeso}%"></div>
+          ${it.budget > 0 ? `<div class="chart-h-bar-budget" style="left:${wBudget}%" title="Budget: ${euroR(it.budget)}"></div>` : ''}
+        </div>
+        <div class="chart-h-value">
+          ${euroR(it.speso)}
+          <div class="chart-h-value-sub">${it.pct.toFixed(0)}% di ${euroR(it.budget)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-title">Spese per categoria <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">· barra blu = speso · linea verticale = budget</span></div>
+      <div class="chart-h">${rows}</div>
+    </div>
+  `;
+}
+
+function renderSupplierChart() {
+  if (state.suppliers.length === 0) return '';
+  const items = state.suppliers.map(s => {
+    const pays = state.payments.filter(p => p.supplierId === s.id);
+    const speso = pays.reduce((sum, p) => sum + (Number(p.imponibile)||0), 0);
+    return { name: s.name, speso, count: pays.length };
+  }).filter(x => x.speso > 0).sort((a,b) => b.speso - a.speso).slice(0, 12);
+
+  if (items.length === 0) return '';
+  const maxVal = items[0].speso || 1;
+
+  let rows = '';
+  for (const it of items) {
+    const w = (it.speso / maxVal) * 100;
+    rows += `
+      <div class="chart-h-row">
+        <div class="chart-h-label" title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</div>
+        <div class="chart-h-bar-wrap">
+          <div class="chart-h-bar" style="width:${w}%; background: var(--accent);"></div>
+        </div>
+        <div class="chart-h-value">
+          ${euroR(it.speso)}
+          <div class="chart-h-value-sub">${it.count} pag.</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-title">Top fornitori per spesa</div>
+      <div class="chart-h">${rows}</div>
+    </div>
+  `;
+}
+
+// ---------- DETRAZIONI ----------
+function renderDetrazioni() {
+  const el = document.getElementById('detrazioni-content');
+  if (!el) return;
+
+  // Pagamenti detraibili
+  const detPays = state.payments.filter(isDeductiblePayment);
+  const totDetraz = detPays.reduce((s,p) => s + paymentDeduction(p), 0);
+
+  // Da assegnare
+  const daAssegnare = state.payments.filter(p => !p.deductionTypeId || p.deductionTypeId === 'dt_da_assegnare');
+
+  let html = `
+    <h2 style="font-size:18px; font-weight:700; margin:0 0 14px;">Detrazioni fiscali</h2>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Detrazione totale</div>
+        <div class="stat-value" style="color:var(--good);">${euroR(totDetraz)}</div>
+        <div class="stat-sub">${detPays.length} pagamenti detraibili</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Rata annua (×10 anni)</div>
+        <div class="stat-value" style="color:var(--accent);">${euroR(totDetraz / 10)}</div>
+        <div class="stat-sub">Periodo recupero IRPEF</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Da assegnare</div>
+        <div class="stat-value" style="color:${daAssegnare.length>0?'var(--warn)':'var(--ink-faint)'};">${daAssegnare.length}</div>
+        <div class="stat-sub">Pagamenti senza tipo bonus</div>
+      </div>
+    </div>
+  `;
+
+  if (state.beneficiaries.length === 0) {
+    html += '<div class="card"><div class="empty"><div class="empty-icon">👤</div>Nessun beneficiario. Aggiungili dal tab "Beneficiari".</div></div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  // Per ogni beneficiario calcola la detrazione e simula i 10 anni
+  for (const ben of state.beneficiaries) {
+    let benDetraz = 0;
+    const byType = {}; // {dtId: {name, totGross, totDed}}
+    let nPays = 0;
+    let nNoBonifico = 0;
+
+    for (const p of detPays) {
+      const benRow = (p.beneficiaries || []).find(b => b.beneficiaryId === ben.id);
+      if (!benRow) continue;
+      const quotaPct = (Number(benRow.quota) || 0) / 100;
+      const dt = getDeductionType(p.deductionTypeId);
+      const lordo = grossOf(p);
+      const detraz = lordo * (dt.rate / 100) * quotaPct;
+      benDetraz += detraz;
+      nPays++;
+      if (!p.bonificoParlante) nNoBonifico++;
+      if (!byType[dt.id]) byType[dt.id] = { name: dt.name, rate: dt.rate, totGross: 0, totDed: 0, count: 0 };
+      byType[dt.id].totGross += lordo * quotaPct;
+      byType[dt.id].totDed += detraz;
+      byType[dt.id].count += 1;
+    }
+
+    const rataAnnua = benDetraz / 10;
+    const irpef = Number(ben.irpef) || 0;
+    const recuperabilePerAnno = irpef > 0 ? Math.min(rataAnnua, irpef) : rataAnnua;
+    const totRecuperabile10y = recuperabilePerAnno * 10;
+    const persoPerAnno = irpef > 0 ? Math.max(0, rataAnnua - irpef) : 0;
+    const totPerso10y = persoPerAnno * 10;
+    const incapienza = irpef > 0 && rataAnnua > irpef;
+
+    html += `<div class="ben-card">
+      <div class="ben-card-head">
+        <div>
+          <div class="ben-card-name">${escapeHtml(ben.name)}</div>
+          <div class="ben-card-cf">${escapeHtml(ben.cf || '')} · quota ${ben.quota || 0}%</div>
+        </div>
+        <div>
+          ${irpef > 0 ? `<div class="ben-irpef-badge">IRPEF annua: ${euroR(irpef)}</div>` : `<div class="ben-irpef-badge missing">IRPEF non impostata</div>`}
+        </div>
+      </div>`;
+
+    if (nPays === 0) {
+      html += `<div class="empty" style="padding: 20px;">Nessun pagamento detraibile assegnato a questo beneficiario.</div></div>`;
+      continue;
+    }
+
+    html += `
+      <div class="ben-stats-row">
+        <div class="ben-stat">
+          <div class="ben-stat-label">Detrazione totale</div>
+          <div class="ben-stat-val" style="color:var(--good);">${euroR(benDetraz)}</div>
+          <div class="ben-stat-sub">su ${nPays} pagamenti</div>
+        </div>
+        <div class="ben-stat">
+          <div class="ben-stat-label">Rata annua</div>
+          <div class="ben-stat-val">${euroR(rataAnnua)}</div>
+          <div class="ben-stat-sub">1/10 spalmato 10 anni</div>
+        </div>
+        <div class="ben-stat">
+          <div class="ben-stat-label">Recupero / anno</div>
+          <div class="ben-stat-val" style="color:${incapienza?'var(--bad)':'var(--good)'};">${euroR(recuperabilePerAnno)}</div>
+          <div class="ben-stat-sub">${irpef > 0 ? `MIN(rata, IRPEF)` : 'IRPEF non impostata'}</div>
+        </div>
+        <div class="ben-stat">
+          <div class="ben-stat-label">Recupero totale 10y</div>
+          <div class="ben-stat-val" style="color:var(--good);">${euroR(totRecuperabile10y)}</div>
+          ${totPerso10y > 0 ? `<div class="ben-stat-sub" style="color:var(--bad);">−${euroR(totPerso10y)} persi</div>` : '<div class="ben-stat-sub">100% recuperabile</div>'}
+        </div>
+      </div>`;
+
+    if (incapienza) {
+      const persoPct = (persoPerAnno / rataAnnua) * 100;
+      html += `<div class="incapienza-alert">
+        <strong>⚠ Incapienza fiscale</strong>
+        La rata annua di detrazione (${euroR(rataAnnua)}) supera l'IRPEF dovuta (${euroR(irpef)}).
+        Ogni anno andranno persi <strong>${euroR(persoPerAnno)}</strong> (${persoPct.toFixed(0)}% della rata) per mancanza di capienza fiscale.
+        Su 10 anni si perderanno <strong>${euroR(totPerso10y)}</strong> di detrazione.
+      </div>`;
+    } else if (irpef > 0) {
+      html += `<div class="capienza-ok">
+        ✓ Capienza fiscale sufficiente: la rata annua (${euroR(rataAnnua)}) è inferiore all'IRPEF dovuta (${euroR(irpef)}). Tutta la detrazione è recuperabile.
+      </div>`;
+    } else {
+      html += `<div class="incapienza-alert" style="background:var(--warn-soft); color:var(--warn); border-color:var(--warn);">
+        <strong>IRPEF non impostata</strong>
+        Vai sul tab "Beneficiari" e imposta l'IRPEF annua dovuta da ${escapeHtml(ben.name)} per calcolare il recupero effettivo e l'eventuale incapienza.
+      </div>`;
+    }
+
+    if (nNoBonifico > 0) {
+      html += `<div class="incapienza-alert" style="background:var(--warn-soft); color:var(--warn); border-color:var(--warn);">
+        <strong>⚠ ${nNoBonifico} pagamento/i senza bonifico parlante</strong>
+        Senza bonifico parlante la detrazione viene persa per quasi tutti i bonus edilizi. Verifica e segnala nel tab Pagamenti.
+      </div>`;
+    }
+
+    // Breakdown per tipo
+    const byTypeArr = Object.values(byType).sort((a,b) => b.totDed - a.totDed);
+    if (byTypeArr.length > 0) {
+      html += `<div style="margin-top:16px;"><div style="font-weight:700; font-size:13px; margin-bottom:8px;">Suddivisione per tipo bonus</div>
+        <div class="table-scroll"><table class="breakdown-table">
+        <thead><tr><th>Tipo</th><th class="num"># pag.</th><th class="num">Lordo</th><th class="num">Aliq.</th><th class="num">Detrazione</th><th class="num">Rata annua</th></tr></thead><tbody>`;
+      for (const t of byTypeArr) {
+        html += `<tr>
+          <td>${escapeHtml(t.name)}</td>
+          <td class="num">${t.count}</td>
+          <td class="num">${euroR(t.totGross)}</td>
+          <td class="num">${t.rate}%</td>
+          <td class="num"><strong style="color:var(--good);">${euroR(t.totDed)}</strong></td>
+          <td class="num">${euroR(t.totDed/10)}</td>
+        </tr>`;
+      }
+      html += `</tbody></table></div></div>`;
+    }
+
+    // === MASSIMALI PER ANNO ===
+    html += renderBenMassimali(ben, detPays);
+
+    html += `</div>`;
+  }
+
+  // Pagamenti da assegnare
+  if (daAssegnare.length > 0) {
+    html += `<div class="card" style="background: var(--warn-soft); border-left: 4px solid var(--warn);">
+      <div class="card-title" style="color: var(--warn);">⚠ ${daAssegnare.length} pagamento/i con tipo "Da assegnare"</div>
+      <div style="font-size:13px; color:var(--ink); margin-bottom:10px;">Questi pagamenti hanno beneficiari ma nessun tipo bonus selezionato. La detrazione non è ancora calcolata.</div>
+      <div class="table-scroll"><table>
+        <thead><tr><th>Data</th><th>Fornitore</th><th>Descrizione</th><th class="num">Imponibile</th><th></th></tr></thead><tbody>`;
+    for (const p of daAssegnare.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''))) {
+      const sup = state.suppliers.find(s => s.id === p.supplierId);
+      html += `<tr>
+        <td>${fmtDate(p.date)}</td>
+        <td>${sup ? escapeHtml(sup.name) : '—'}</td>
+        <td>${escapeHtml(p.description||'—')}</td>
+        <td class="num">${euroR(p.imponibile)}</td>
+        <td><span class="action-link" onclick="openPaymentModal('${p.id}')">Apri</span></td>
+      </tr>`;
+    }
+    html += `</tbody></table></div></div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderBenMassimali(ben, detPays) {
+  const massimali = ben.massimali || {};
+  // Aggrego lordo competenza per (year, dtId)
+  const byYearType = {}; // {dtId: {year: lordo}}
+  for (const p of detPays) {
+    const benRow = (p.beneficiaries||[]).find(b => b.beneficiaryId === ben.id);
+    if (!benRow) continue;
+    if (!p.date) continue;
+    const year = p.date.slice(0,4);
+    const dtId = p.deductionTypeId;
+    const dt = getDeductionType(dtId);
+    if (!dt || dt.isPlaceholder || dt.isNone) continue;
+    const lordo = grossOf(p) * ((Number(benRow.quota)||0)/100);
+    if (!byYearType[dtId]) byYearType[dtId] = {};
+    byYearType[dtId][year] = (byYearType[dtId][year]||0) + lordo;
+  }
+
+  // Tipi rilevanti: con massimale impostato OPPURE con spesa
+  const relevantTypes = new Set([...Object.keys(massimali), ...Object.keys(byYearType)]);
+  if (relevantTypes.size === 0) return '';
+
+  let rows = '';
+  for (const dtId of relevantTypes) {
+    const dt = getDeductionType(dtId);
+    if (!dt) continue;
+    const max = Number(massimali[dtId]) || 0;
+    const spesePerAnno = byYearType[dtId] || {};
+    const years = Object.keys(spesePerAnno).sort();
+    if (years.length === 0) continue; // niente spesa = non mostro la riga
+    for (const year of years) {
+      const speso = spesePerAnno[year] || 0;
+      let statusBadge = '';
+      let pcls = '';
+      if (max > 0) {
+        const pctReal = (speso / max) * 100;
+        if (speso > max) {
+          const eccesso = speso - max;
+          statusBadge = `<span class="badge badge-bad">⚠ supera di ${euroR(eccesso)}</span>`;
+          pcls = 'bad';
+        } else if (pctReal > 90) {
+          statusBadge = `<span class="badge badge-warn">${pctReal.toFixed(0)}% del massimale</span>`;
+          pcls = 'warn';
+        } else {
+          statusBadge = `<span class="badge badge-good">${pctReal.toFixed(0)}% del massimale</span>`;
+        }
+      } else {
+        statusBadge = '<span style="color:var(--ink-faint); font-size:11px;">massimale non impostato</span>';
+      }
+      const pct = max > 0 ? Math.min(100, (speso/max)*100) : 0;
+      rows += `<tr>
+        <td><strong>${year}</strong></td>
+        <td>${escapeHtml(dt.name)}</td>
+        <td class="num">${euroR(speso)}</td>
+        <td class="num">${max > 0 ? euroR(max) : '—'}</td>
+        <td>${statusBadge}${max > 0 ? `<div class="progress" style="margin-top:4px;"><div class="progress-fill ${pcls}" style="width:${pct}%"></div></div>` : ''}</td>
+      </tr>`;
+    }
+  }
+
+  if (!rows) return '';
+
+  return `<div style="margin-top:16px;">
+    <div style="font-weight:700; font-size:13px; margin-bottom:8px;">Massimali per anno <span style="font-weight:400; color:var(--ink-faint); font-size:11px;">· spesa lorda di competenza vs massimale annuale</span></div>
+    <div class="table-scroll"><table class="breakdown-table">
+      <thead><tr><th>Anno</th><th>Tipo</th><th class="num">Speso (lordo)</th><th class="num">Massimale</th><th>Stato</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ---------- CATEGORIES ----------
+function renderCategories() {
+  const el = document.getElementById('categories-list');
+  if (state.categories.length === 0) {
+    el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">📁</div>Nessuna categoria. Aggiungine una per iniziare.</div></div>';
+    return;
+  }
+  let html = '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Nome</th><th class="num">Budget</th><th class="num">Speso</th><th class="num">Residuo</th><th class="num"># pag.</th><th></th></tr></thead><tbody>';
+  for (const c of state.categories) {
+    const speso = state.payments.filter(p => p.categoryId === c.id).reduce((s,p) => s + (Number(p.imponibile)||0), 0);
+    const residuo = (Number(c.budget)||0) - speso;
+    const npag = state.payments.filter(p => p.categoryId === c.id).length;
+    html += `<tr>
+      <td><strong>${escapeHtml(c.name)}</strong></td>
+      <td class="num">${euroR(c.budget)}</td>
+      <td class="num">${euroR(speso)}</td>
+      <td class="num" style="color:${residuo<0?'var(--bad)':'var(--good)'};">${euroR(residuo)}</td>
+      <td class="num">${npag}</td>
+      <td><span class="action-link" onclick="openCategoryModal('${c.id}')">Modifica</span></td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+  el.innerHTML = html;
+}
+
+let editingCategoryId = null;
+function openCategoryModal(id=null) {
+  editingCategoryId = id;
+  document.getElementById('cat-modal-title').textContent = id ? 'Modifica categoria' : 'Nuova categoria';
+  document.getElementById('cat-delete-btn').style.display = id ? '' : 'none';
+  if (id) {
+    const c = state.categories.find(x => x.id === id);
+    document.getElementById('cat-name').value = c.name || '';
+    document.getElementById('cat-budget').value = c.budget != null ? c.budget : '';
+  } else {
+    document.getElementById('cat-name').value = '';
+    document.getElementById('cat-budget').value = '';
+  }
+  openModal('modal-category');
+}
+
+async function saveCategory() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) { alert('Inserisci il nome'); return; }
+  const budget = Number(document.getElementById('cat-budget').value) || 0;
+  if (editingCategoryId) {
+    const c = state.categories.find(x => x.id === editingCategoryId);
+    c.name = name; c.budget = budget;
+    await put('categories', c);
+  } else {
+    const c = { id: 'cat_' + uid(), name, budget };
+    await put('categories', c);
+    state.categories.push(c);
+  }
+  closeModal('modal-category');
+  renderAll();
+  showToast('Categoria salvata');
+}
+
+async function deleteCategory() {
+  if (!editingCategoryId) return;
+  const used = state.payments.some(p => p.categoryId === editingCategoryId);
+  if (used) { alert('Categoria usata in alcuni pagamenti. Riassegna prima i pagamenti.'); return; }
+  if (!confirm('Eliminare questa categoria?')) return;
+  await del('categories', editingCategoryId);
+  state.categories = state.categories.filter(c => c.id !== editingCategoryId);
+  closeModal('modal-category');
+  renderAll();
+  showToast('Categoria eliminata');
+}
+
+// ---------- SUPPLIERS ----------
+function renderSuppliers() {
+  const el = document.getElementById('suppliers-list');
+  if (state.suppliers.length === 0) {
+    el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">👥</div>Nessun fornitore.</div></div>';
+    return;
+  }
+  let html = '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Ragione sociale</th><th>P.IVA</th><th class="num">IVA</th><th class="num"># pag.</th><th class="num">Totale lordo</th><th></th></tr></thead><tbody>';
+  for (const s of state.suppliers) {
+    const pays = state.payments.filter(p => p.supplierId === s.id);
+    const totLordo = pays.reduce((sum, p) => sum + grossOf(p), 0);
+    html += `<tr>
+      <td><strong>${escapeHtml(s.name)}</strong>${s.contact ? `<br><span style="color:var(--ink-faint); font-size:11px;">${escapeHtml(s.contact)}</span>` : ''}</td>
+      <td style="font-size:12px;">${escapeHtml(s.piva || '—')}</td>
+      <td class="num">${s.defaultIva != null ? s.defaultIva + '%' : '—'}</td>
+      <td class="num">${pays.length}</td>
+      <td class="num">${euroR(totLordo)}</td>
+      <td><span class="action-link" onclick="openSupplierModal('${s.id}')">Modifica</span></td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+  el.innerHTML = html;
+}
+
+let editingSupplierId = null;
+function openSupplierModal(id=null) {
+  editingSupplierId = id;
+  document.getElementById('sup-modal-title').textContent = id ? 'Modifica fornitore' : 'Nuovo fornitore';
+  document.getElementById('sup-delete-btn').style.display = id ? '' : 'none';
+  const fields = ['name','piva','cf','address','email','phone','iban','contact','note'];
+  if (id) {
+    const s = state.suppliers.find(x => x.id === id);
+    fields.forEach(f => document.getElementById('sup-' + f).value = s[f] || '');
+    document.getElementById('sup-iva').value = s.defaultIva != null ? s.defaultIva : 22;
+  } else {
+    fields.forEach(f => document.getElementById('sup-' + f).value = '');
+    document.getElementById('sup-iva').value = 22;
+  }
+  openModal('modal-supplier');
+}
+
+async function saveSupplier() {
+  const name = document.getElementById('sup-name').value.trim();
+  if (!name) { alert('Inserisci la ragione sociale'); return; }
+  const data = {
+    name,
+    piva: document.getElementById('sup-piva').value.trim(),
+    cf: document.getElementById('sup-cf').value.trim(),
+    address: document.getElementById('sup-address').value.trim(),
+    email: document.getElementById('sup-email').value.trim(),
+    phone: document.getElementById('sup-phone').value.trim(),
+    iban: document.getElementById('sup-iban').value.trim(),
+    contact: document.getElementById('sup-contact').value.trim(),
+    note: document.getElementById('sup-note').value.trim(),
+    defaultIva: Number(document.getElementById('sup-iva').value) || 0
+  };
+  if (editingSupplierId) {
+    const s = state.suppliers.find(x => x.id === editingSupplierId);
+    Object.assign(s, data);
+    await put('suppliers', s);
+  } else {
+    const s = { id: 'sup_' + uid(), ...data };
+    await put('suppliers', s);
+    state.suppliers.push(s);
+  }
+  closeModal('modal-supplier');
+  renderAll();
+  showToast('Fornitore salvato');
+}
+
+async function deleteSupplier() {
+  if (!editingSupplierId) return;
+  const used = state.payments.some(p => p.supplierId === editingSupplierId);
+  if (used) { alert('Fornitore usato in alcuni pagamenti. Riassegna prima i pagamenti.'); return; }
+  if (!confirm('Eliminare questo fornitore?')) return;
+  await del('suppliers', editingSupplierId);
+  state.suppliers = state.suppliers.filter(s => s.id !== editingSupplierId);
+  closeModal('modal-supplier');
+  renderAll();
+  showToast('Fornitore eliminato');
+}
+
+// ---------- BENEFICIARIES ----------
+function renderBeneficiaries() {
+  const el = document.getElementById('beneficiaries-list');
+  if (state.beneficiaries.length === 0) {
+    el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">👤</div>Nessun beneficiario.</div></div>';
+    return;
+  }
+  let html = '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Nome</th><th>CF</th><th class="num">Quota</th><th class="num">IRPEF annua</th><th></th></tr></thead><tbody>';
+  for (const b of state.beneficiaries) {
+    html += `<tr>
+      <td><strong>${escapeHtml(b.name)}</strong>${b.note ? `<br><span style="color:var(--ink-faint); font-size:11px;">${escapeHtml(b.note)}</span>` : ''}</td>
+      <td style="font-size:12px;">${escapeHtml(b.cf || '—')}</td>
+      <td class="num">${b.quota != null ? b.quota + '%' : '—'}</td>
+      <td class="num">${b.irpef != null && b.irpef > 0 ? euroR(b.irpef) : '<span style="color:var(--ink-faint);">non impostata</span>'}</td>
+      <td><span class="action-link" onclick="openBeneficiaryModal('${b.id}')">Modifica</span></td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+  el.innerHTML = html;
+}
+
+let editingBeneficiaryId = null;
+function openBeneficiaryModal(id=null) {
+  editingBeneficiaryId = id;
+  document.getElementById('ben-modal-title').textContent = id ? 'Modifica beneficiario' : 'Nuovo beneficiario';
+  document.getElementById('ben-delete-btn').style.display = id ? '' : 'none';
+  let currentMassimali = {};
+  if (id) {
+    const b = state.beneficiaries.find(x => x.id === id);
+    document.getElementById('ben-name').value = b.name || '';
+    document.getElementById('ben-cf').value = b.cf || '';
+    document.getElementById('ben-quota').value = b.quota != null ? b.quota : '';
+    document.getElementById('ben-irpef').value = b.irpef != null ? b.irpef : '';
+    document.getElementById('ben-note').value = b.note || '';
+    currentMassimali = b.massimali || {};
+  } else {
+    ['ben-name','ben-cf','ben-quota','ben-irpef','ben-note'].forEach(i => document.getElementById(i).value = '');
+  }
+  // Popola tabella massimali (un input per ogni tipo detrazione "vero")
+  const massimaliBox = document.getElementById('ben-massimali');
+  const realTypes = state.deductionTypes.filter(t => !t.isPlaceholder && !t.isNone);
+  let mh = '<div style="display:flex; flex-direction:column; gap:6px;">';
+  for (const t of realTypes) {
+    const val = currentMassimali[t.id] != null ? currentMassimali[t.id] : '';
+    mh += `<div style="display:grid; grid-template-columns: 1fr 130px; gap:8px; align-items:center;">
+      <div style="font-size:13px;">${escapeHtml(t.name)}</div>
+      <input type="number" inputmode="decimal" step="0.01" min="0" data-mass-id="${t.id}" value="${val}" placeholder="es. 192000" style="padding:7px 10px; font-size:13px; border:1px solid var(--line-strong); border-radius:6px; text-align:right;">
+    </div>`;
+  }
+  mh += '</div>';
+  massimaliBox.innerHTML = mh;
+  openModal('modal-beneficiary');
+}
+
+async function saveBeneficiary() {
+  const name = document.getElementById('ben-name').value.trim();
+  if (!name) { alert('Inserisci nome e cognome'); return; }
+  const massimali = {};
+  document.querySelectorAll('#ben-massimali input[data-mass-id]').forEach(inp => {
+    const v = Number(inp.value);
+    if (v > 0) massimali[inp.dataset.massId] = v;
+  });
+  const data = {
+    name,
+    cf: document.getElementById('ben-cf').value.trim(),
+    quota: Number(document.getElementById('ben-quota').value) || 0,
+    irpef: Number(document.getElementById('ben-irpef').value) || 0,
+    massimali,
+    note: document.getElementById('ben-note').value.trim()
+  };
+  if (editingBeneficiaryId) {
+    const b = state.beneficiaries.find(x => x.id === editingBeneficiaryId);
+    Object.assign(b, data);
+    await put('beneficiaries', b);
+  } else {
+    const b = { id: 'ben_' + uid(), ...data };
+    await put('beneficiaries', b);
+    state.beneficiaries.push(b);
+  }
+  closeModal('modal-beneficiary');
+  renderAll();
+  showToast('Beneficiario salvato');
+}
+
+async function deleteBeneficiary() {
+  if (!editingBeneficiaryId) return;
+  const used = state.payments.some(p => (p.beneficiaries||[]).some(b => b.beneficiaryId === editingBeneficiaryId));
+  if (used) { alert('Beneficiario usato nei pagamenti. Rimuovilo prima dai pagamenti.'); return; }
+  if (!confirm('Eliminare questo beneficiario?')) return;
+  await del('beneficiaries', editingBeneficiaryId);
+  state.beneficiaries = state.beneficiaries.filter(b => b.id !== editingBeneficiaryId);
+  closeModal('modal-beneficiary');
+  renderAll();
+  showToast('Beneficiario eliminato');
+}
+
+// ---------- DEDUCTION TYPES ----------
+function renderDeductionTypes() {
+  const el = document.getElementById('deduction-types-list');
+  if (!el) return;
+  const visible = state.deductionTypes.filter(t => !t.isPlaceholder); // "Da assegnare" non si gestisce
+  let html = '<div class="table-scroll"><table><thead><tr><th>Nome</th><th class="num">Aliquota</th><th></th></tr></thead><tbody>';
+  for (const t of visible) {
+    const editable = !t.isNone;
+    html += `<tr>
+      <td>${escapeHtml(t.name)}</td>
+      <td class="num">${t.rate}%</td>
+      <td>${editable ? `<span class="action-link" onclick="openDeductionTypeModal('${t.id}')">Modifica</span>` : '<span style="color:var(--ink-faint); font-size:11px;">sistema</span>'}</td>
+    </tr>`;
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+let editingDedTypeId = null;
+function openDeductionTypeModal(id=null) {
+  editingDedTypeId = id;
+  document.getElementById('dt-modal-title').textContent = id ? 'Modifica tipo' : 'Nuovo tipo detrazione';
+  document.getElementById('dt-delete-btn').style.display = id ? '' : 'none';
+  if (id) {
+    const t = state.deductionTypes.find(x => x.id === id);
+    document.getElementById('dt-name').value = t.name;
+    document.getElementById('dt-rate').value = t.rate;
+  } else {
+    document.getElementById('dt-name').value = '';
+    document.getElementById('dt-rate').value = '';
+  }
+  openModal('modal-dedtype');
+}
+
+async function saveDeductionType() {
+  const name = document.getElementById('dt-name').value.trim();
+  const rate = Number(document.getElementById('dt-rate').value);
+  if (!name || rate < 0 || rate > 100) { alert('Dati non validi'); return; }
+  if (editingDedTypeId) {
+    const t = state.deductionTypes.find(x => x.id === editingDedTypeId);
+    t.name = name; t.rate = rate;
+    await put('deductionTypes', t);
+  } else {
+    const t = { id: 'dt_' + uid(), name, rate };
+    await put('deductionTypes', t);
+    state.deductionTypes.push(t);
+  }
+  closeModal('modal-dedtype');
+  renderAll();
+  showToast('Tipo salvato');
+}
+
+async function deleteDeductionType() {
+  if (!editingDedTypeId) return;
+  const used = state.payments.some(p => p.deductionTypeId === editingDedTypeId);
+  if (used) { alert('Tipo usato nei pagamenti. Riassegna prima i pagamenti.'); return; }
+  if (!confirm('Eliminare questo tipo?')) return;
+  await del('deductionTypes', editingDedTypeId);
+  state.deductionTypes = state.deductionTypes.filter(t => t.id !== editingDedTypeId);
+  closeModal('modal-dedtype');
+  renderAll();
+  showToast('Tipo eliminato');
+}
+
+// ---------- PAYMENTS ----------
+function renderPayments() {
+  // Popola filtri
+  const supSel = document.getElementById('filter-supplier');
+  if (supSel.options.length <= 1) {
+    supSel.innerHTML = '<option value="">Tutti i fornitori</option>' + state.suppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  }
+  const catSel = document.getElementById('filter-category');
+  if (catSel.options.length <= 1) {
+    catSel.innerHTML = '<option value="">Tutte le categorie</option>' + state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  }
+  const dedSel = document.getElementById('filter-detraz');
+  // ricostruisco con i tipi attuali
+  const curDed = dedSel.value;
+  dedSel.innerHTML = '<option value="">Tutte le detrazioni</option><option value="da-assegnare">Da assegnare</option><option value="nessuna">Nessuna</option>' + state.deductionTypes.filter(t => !t.isPlaceholder && !t.isNone).map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  dedSel.value = curDed;
+
+  const search = document.getElementById('filter-search').value.toLowerCase().trim();
+  const fSup = document.getElementById('filter-supplier').value;
+  const fCat = document.getElementById('filter-category').value;
+  const fStat = document.getElementById('filter-status').value;
+  const fDed = document.getElementById('filter-detraz').value;
+
+  let pays = state.payments.slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (search) pays = pays.filter(p => (p.description||'').toLowerCase().includes(search) || (p.invoiceNum||'').toLowerCase().includes(search) || (p.note||'').toLowerCase().includes(search));
+  if (fSup) pays = pays.filter(p => p.supplierId === fSup);
+  if (fCat) pays = pays.filter(p => p.categoryId === fCat);
+  if (fStat) pays = pays.filter(p => p.status === fStat);
+  if (fDed === 'da-assegnare') pays = pays.filter(p => !p.deductionTypeId || p.deductionTypeId === 'dt_da_assegnare');
+  else if (fDed === 'nessuna') pays = pays.filter(p => p.deductionTypeId === 'dt_nessuna');
+  else if (fDed) pays = pays.filter(p => p.deductionTypeId === fDed);
+
+  const el = document.getElementById('payments-table');
+  if (pays.length === 0) {
+    el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">💰</div>Nessun pagamento.</div></div>';
+    return;
+  }
+
+  let html = '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Data</th><th>Categoria</th><th>Fornitore</th><th>Descrizione</th><th class="num">Imponibile</th><th class="num">IVA</th><th class="num">Lordo</th><th>Detrazione</th><th>Stato</th><th>All.</th><th></th></tr></thead><tbody>';
+  for (const p of pays) {
+    const cat = state.categories.find(c => c.id === p.categoryId);
+    const sup = state.suppliers.find(s => s.id === p.supplierId);
+    const dt = getDeductionType(p.deductionTypeId);
+    const lordo = grossOf(p);
+    const iva = ivaOf(p);
+    let statusBadge = 'badge-neutral';
+    if (p.status === 'pagato') statusBadge = 'badge-good';
+    else if (p.status === 'da-pagare') statusBadge = 'badge-bad';
+    else if (p.status === 'preventivo') statusBadge = 'badge-warn';
+    const statusLabel = {pagato:'Pagato', 'da-pagare':'Da pagare', preventivo:'Preventivo'}[p.status] || p.status;
+    let dedDisplay = '<span style="color:var(--ink-faint); font-size:11px;">—</span>';
+    if (dt) {
+      if (dt.isPlaceholder) dedDisplay = '<span class="badge badge-warn">Da assegnare</span>';
+      else if (dt.isNone) dedDisplay = '<span style="color:var(--ink-faint); font-size:11px;">Nessuna</span>';
+      else {
+        const ded = paymentDeduction(p);
+        const bonifWarn = !p.bonificoParlante ? ' ⚠' : '';
+        dedDisplay = `<span class="badge badge-info">${escapeHtml(dt.name)}</span><br><span style="font-size:11px; color:var(--good); font-weight:700;">${euroR(ded)}${bonifWarn}</span>`;
+      }
+    } else if (!p.deductionTypeId) {
+      dedDisplay = '<span class="badge badge-warn">Da assegnare</span>';
+    }
+    const nAtt = (p.attachments||[]).length;
+    html += `<tr>
+      <td>${fmtDate(p.date)}</td>
+      <td>${cat ? escapeHtml(cat.name) : '—'}</td>
+      <td>${sup ? escapeHtml(sup.name) : '—'}</td>
+      <td>${escapeHtml(p.description||'—')}${p.invoiceNum?`<br><span style="color:var(--ink-faint); font-size:11px;">${escapeHtml(p.invoiceNum)}</span>`:''}</td>
+      <td class="num">${euro(p.imponibile)}</td>
+      <td class="num"><span style="font-size:11px; color:var(--ink-faint);">${p.ivaPct}%</span><br>${euro(iva)}</td>
+      <td class="num"><strong>${euro(lordo)}</strong></td>
+      <td>${dedDisplay}</td>
+      <td><span class="badge ${statusBadge}">${statusLabel}</span></td>
+      <td>${nAtt > 0 ? `<span class="badge badge-info">${nAtt}</span>` : '<span style="color:var(--ink-faint);">—</span>'}</td>
+      <td><span class="action-link" onclick="openPaymentModal('${p.id}')">Mod.</span></td>
+    </tr>`;
+  }
+  html += '</tbody></table></div></div>';
+  el.innerHTML = html;
+}
+
+// ----- Payment modal -----
+let editingPaymentId = null;
+let pendingAttachments = []; // attachments under edit (potentially new ones not yet saved)
+
+function openPaymentModal(id=null) {
+  editingPaymentId = id;
+  document.getElementById('pay-modal-title').textContent = id ? 'Modifica pagamento' : 'Nuovo pagamento';
+  document.getElementById('pay-delete-btn').style.display = id ? '' : 'none';
+
+  // Popola dropdown
+  document.getElementById('pay-category').innerHTML = '<option value="">— scegli —</option>' + state.categories.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  document.getElementById('pay-supplier').innerHTML = '<option value="">— scegli —</option>' + state.suppliers.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  document.getElementById('pay-deduction-type').innerHTML = state.deductionTypes.map(t => `<option value="${t.id}">${escapeHtml(t.name)}${t.rate>0&&!t.isPlaceholder?` (${t.rate}%)`:''}</option>`).join('');
+
+  document.getElementById('pay-att-file').value = '';
+
+  if (id) {
+    const p = state.payments.find(x => x.id === id);
+    document.getElementById('pay-date').value = p.date || new Date().toISOString().slice(0,10);
+    document.getElementById('pay-status').value = p.status || 'pagato';
+    document.getElementById('pay-category').value = p.categoryId || '';
+    document.getElementById('pay-supplier').value = p.supplierId || '';
+    document.getElementById('pay-description').value = p.description || '';
+    document.getElementById('pay-imponibile').value = p.imponibile != null ? p.imponibile : '';
+    document.getElementById('pay-iva').value = p.ivaPct != null ? p.ivaPct : 22;
+    document.getElementById('pay-invoice').value = p.invoiceNum || '';
+    document.getElementById('pay-deduction-type').value = p.deductionTypeId || 'dt_da_assegnare';
+    document.getElementById('pay-bonifico').checked = !!p.bonificoParlante;
+    document.getElementById('pay-note').value = p.note || '';
+    pendingAttachments = (p.attachments || []).slice();
+    // Beneficiari
+    const benRows = document.getElementById('pay-ben-rows');
+    benRows.innerHTML = '';
+    (p.beneficiaries || []).forEach(b => addPayBenRow(b.beneficiaryId, b.quota));
+  } else {
+    document.getElementById('pay-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('pay-status').value = 'pagato';
+    document.getElementById('pay-category').value = '';
+    document.getElementById('pay-supplier').value = '';
+    document.getElementById('pay-description').value = '';
+    document.getElementById('pay-imponibile').value = '';
+    document.getElementById('pay-iva').value = 22;
+    document.getElementById('pay-invoice').value = '';
+    document.getElementById('pay-deduction-type').value = 'dt_da_assegnare';
+    document.getElementById('pay-bonifico').checked = false;
+    document.getElementById('pay-note').value = '';
+    pendingAttachments = [];
+    document.getElementById('pay-ben-rows').innerHTML = '';
+  }
+
+  // Auto-set IVA da fornitore
+  document.getElementById('pay-supplier').onchange = () => {
+    const sup = state.suppliers.find(s => s.id === document.getElementById('pay-supplier').value);
+    if (sup && sup.defaultIva != null) {
+      document.getElementById('pay-iva').value = sup.defaultIva;
+      updatePayPreview();
+    }
+  };
+
+  renderPayAttachments();
+  updatePayPreview();
+  updateBonificoWarn();
+  openModal('modal-payment');
+}
+
+function addPayBenRow(benId='', quota='') {
+  const list = document.getElementById('pay-ben-rows');
+  const div = document.createElement('div');
+  div.className = 'ben-row';
+  const opts = state.beneficiaries.map(b => `<option value="${b.id}" ${benId===b.id?'selected':''}>${escapeHtml(b.name)}</option>`).join('');
+  div.innerHTML = `
+    <select class="bp-sel">${opts || '<option value="">— nessuno —</option>'}</select>
+    <input type="number" class="bp-q" inputmode="decimal" step="0.01" min="0" max="100" value="${quota}" placeholder="%">
+    <button type="button" class="ben-del" onclick="this.parentElement.remove(); updatePayBenTotal();">×</button>
+  `;
+  list.appendChild(div);
+  div.querySelector('.bp-q').addEventListener('input', updatePayBenTotal);
+  updatePayBenTotal();
+}
+
+function updatePayBenTotal() {
+  const list = document.getElementById('pay-ben-rows');
+  const total = Array.from(list.querySelectorAll('.bp-q')).reduce((s,i) => s + (Number(i.value)||0), 0);
+  const el = document.getElementById('pay-ben-total');
+  el.textContent = `Totale: ${total.toFixed(0)}%`;
+  el.classList.toggle('bad', Math.abs(total - 100) > 0.01 && total > 0);
+}
+
+function readPayBeneficiaries() {
+  return Array.from(document.querySelectorAll('#pay-ben-rows .ben-row')).map(r => ({
+    beneficiaryId: r.querySelector('.bp-sel').value,
+    quota: Number(r.querySelector('.bp-q').value) || 0
+  })).filter(b => b.beneficiaryId);
+}
+
+function updatePayPreview() {
+  const imp = Number(document.getElementById('pay-imponibile').value) || 0;
+  const iva = Number(document.getElementById('pay-iva').value) || 0;
+  const lordo = imp * (1 + iva/100);
+  const ivaAmt = imp * (iva/100);
+  document.getElementById('pay-preview').textContent = `Lordo: ${euro(lordo)} (imp. ${euro(imp)} + IVA ${euro(ivaAmt)})`;
+
+  const dtId = document.getElementById('pay-deduction-type').value;
+  const dt = state.deductionTypes.find(t => t.id === dtId);
+  const dpEl = document.getElementById('pay-detraz-preview');
+  if (dt && dt.rate > 0 && !dt.isPlaceholder) {
+    const ded = lordo * (dt.rate / 100);
+    dpEl.textContent = `Detrazione recuperabile: ${euro(ded)} (${dt.rate}% × ${euro(lordo)})`;
+    dpEl.style.display = '';
+  } else {
+    dpEl.style.display = 'none';
+  }
+  updateBonificoWarn();
+}
+
+function updateBonificoWarn() {
+  const dtId = document.getElementById('pay-deduction-type').value;
+  const dt = state.deductionTypes.find(t => t.id === dtId);
+  const isDed = dt && dt.rate > 0 && !dt.isPlaceholder;
+  const checked = document.getElementById('pay-bonifico').checked;
+  document.getElementById('pay-bonifico-warn').style.display = (isDed && !checked) ? '' : 'none';
+}
+
+function renderPayAttachments() {
+  const el = document.getElementById('pay-att-list');
+  if (pendingAttachments.length === 0) {
+    el.innerHTML = '<div style="font-size:11px; color:var(--ink-faint);">Nessun allegato</div>';
+    return;
+  }
+  el.innerHTML = pendingAttachments.map((a,i) => `
+    <div class="att-item">
+      <span class="att-kind">${escapeHtml(a.kind || 'file')}</span>
+      <span class="att-name">${escapeHtml(a.name)}</span>
+      <span style="font-size:10px; color:var(--ink-faint);">${(a.size/1024).toFixed(0)} KB</span>
+      <div class="att-actions">
+        <button class="att-icon-btn" onclick="downloadAttachment(${i})" title="Scarica">⬇</button>
+        <button class="att-icon-btn" onclick="removeAttachment(${i})" title="Rimuovi">×</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function onAttFileSelected(event) {
+  const files = Array.from(event.target.files || []);
+  if (files.length === 0) return;
+  let done = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const kind = file.name.toLowerCase().includes('bonifico') ? 'bonifico' : (file.name.toLowerCase().includes('fatt') ? 'fattura' : 'allegato');
+      pendingAttachments.push({
+        id: 'att_' + uid(),
+        kind,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data: e.target.result
+      });
+      done++;
+      if (done === files.length) {
+        renderPayAttachments();
+        event.target.value = '';
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removeAttachment(idx) {
+  if (!confirm('Rimuovere questo allegato?')) return;
+  pendingAttachments.splice(idx, 1);
+  renderPayAttachments();
+}
+
+function downloadAttachment(idx) {
+  const a = pendingAttachments[idx];
+  const link = document.createElement('a');
+  link.href = a.data;
+  link.download = a.name;
+  link.click();
+}
+
+async function savePayment() {
+  const date = document.getElementById('pay-date').value;
+  const status = document.getElementById('pay-status').value;
+  const categoryId = document.getElementById('pay-category').value;
+  const supplierId = document.getElementById('pay-supplier').value;
+  if (!date || !categoryId || !supplierId) { alert('Compila data, categoria e fornitore'); return; }
+  const imp = Number(document.getElementById('pay-imponibile').value);
+  if (!imp || imp <= 0) { alert('Imponibile non valido'); return; }
+  const benefs = readPayBeneficiaries();
+  const tot = benefs.reduce((s,b) => s + b.quota, 0);
+  const dtId = document.getElementById('pay-deduction-type').value;
+  const dt = state.deductionTypes.find(t => t.id === dtId);
+  const isDed = dt && dt.rate > 0 && !dt.isPlaceholder;
+  if (isDed && benefs.length === 0) { alert('Per un pagamento detraibile aggiungi almeno un beneficiario'); return; }
+  if (isDed && Math.abs(tot - 100) > 0.01) {
+    if (!confirm(`Le quote dei beneficiari sommano ${tot}% (non 100%). Salvare comunque?`)) return;
+  }
+
+  const data = {
+    date, status, categoryId, supplierId,
+    description: document.getElementById('pay-description').value.trim(),
+    imponibile: imp,
+    ivaPct: Number(document.getElementById('pay-iva').value) || 0,
+    invoiceNum: document.getElementById('pay-invoice').value.trim(),
+    deductionTypeId: dtId,
+    bonificoParlante: document.getElementById('pay-bonifico').checked,
+    beneficiaries: benefs,
+    note: document.getElementById('pay-note').value.trim(),
+    attachments: pendingAttachments.slice()
+  };
+
+  if (editingPaymentId) {
+    const p = state.payments.find(x => x.id === editingPaymentId);
+    Object.assign(p, data);
+    await put('payments', p);
+  } else {
+    const p = { id: 'pay_' + uid(), ...data };
+    await put('payments', p);
+    state.payments.push(p);
+  }
+  closeModal('modal-payment');
+  renderAll();
+  showToast('Pagamento salvato');
+}
+
+async function deletePayment() {
+  if (!editingPaymentId) return;
+  if (!confirm('Eliminare questo pagamento e i suoi allegati?')) return;
+  await del('payments', editingPaymentId);
+  state.payments = state.payments.filter(p => p.id !== editingPaymentId);
+  closeModal('modal-payment');
+  renderAll();
+  showToast('Pagamento eliminato');
+}
+
+// =========================================================================
+// IMPORT / EXPORT JSON
+// =========================================================================
+async function exportJSON() {
+  const data = {
+    categories: state.categories,
+    suppliers: state.suppliers,
+    beneficiaries: state.beneficiaries,
+    payments: state.payments,
+    deductionTypes: state.deductionTypes.filter(t => !t.isPlaceholder),
+    lastExportDate: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `budget-ristrutturazione-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Export completato');
+}
+
+async function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Conta cosa importeremo
+      const counts = {
+        categories: (data.categories||[]).length,
+        suppliers: (data.suppliers||[]).length,
+        beneficiaries: (data.beneficiaries||[]).length,
+        payments: (data.payments||[]).length
+      };
+      const totAtt = (data.payments||[]).reduce((s,p) => s + ((p.attachments||[]).length), 0);
+      const msg = `Importare:\n• ${counts.categories} categorie\n• ${counts.suppliers} fornitori\n• ${counts.beneficiaries} beneficiari\n• ${counts.payments} pagamenti\n• ${totAtt} allegati PDF/immagini\n\nI dati attuali verranno SOSTITUITI. Procedere?`;
+      if (!confirm(msg)) return;
+
+      // Pulisci tutto
+      for (const s of STORES) { if (s !== 'meta') await clearStore(s); }
+
+      // Migrazione/normalizzazione
+      const cats = (data.categories||[]).map(c => ({
+        id: c.id || ('cat_' + uid()),
+        name: c.name || 'Senza nome',
+        budget: Number(c.budget) || 0
+      }));
+
+      const sups = (data.suppliers||[]).map(s => ({
+        id: s.id || ('sup_' + uid()),
+        name: s.name || 'Senza nome',
+        piva: s.piva || '',
+        cf: s.cf || '',
+        address: s.address || '',
+        email: s.email || '',
+        phone: s.phone || '',
+        iban: s.iban || '',
+        contact: s.contact || '',
+        defaultIva: s.defaultIva != null ? Number(s.defaultIva) : 22,
+        note: s.note || s.notes || ''
+      }));
+
+      const bens = (data.beneficiaries||[]).map(b => ({
+        id: b.id || ('ben_' + uid()),
+        name: b.name || 'Senza nome',
+        cf: b.cf || '',
+        quota: Number(b.quota || b.share || 0),
+        irpef: Number(b.irpef || 0),
+        massimali: b.massimali && typeof b.massimali === 'object' ? b.massimali : {},
+        note: b.note || b.notes || ''
+      }));
+
+      const pays = (data.payments||[]).map(p => {
+        // Mappa beneficiari (vecchio formato {id, share} -> nuovo {beneficiaryId, quota})
+        let benefs = p.beneficiaries || [];
+        benefs = benefs.map(b => ({
+          beneficiaryId: b.beneficiaryId || b.id,
+          quota: Number(b.quota != null ? b.quota : b.share) || 0
+        })).filter(b => b.beneficiaryId);
+
+        // Tipo detrazione: se non specificato, "da assegnare" se ha beneficiari, "nessuna" altrimenti
+        let deductionTypeId = p.deductionTypeId;
+        if (!deductionTypeId) {
+          if (p.deduction && p.deduction.typeId) deductionTypeId = p.deduction.typeId;
+          else if (benefs.length > 0) deductionTypeId = 'dt_da_assegnare';
+          else deductionTypeId = 'dt_nessuna';
+        }
+
+        return {
+          id: p.id || ('pay_' + uid()),
+          date: p.date || '',
+          categoryId: p.categoryId || '',
+          supplierId: p.supplierId || '',
+          beneficiaries: benefs,
+          description: p.description || p.note || '',
+          imponibile: Number(p.imponibile != null ? p.imponibile : p.amount) || 0,
+          ivaPct: Number(p.ivaPct != null ? p.ivaPct : p.vatRate) || 0,
+          status: p.status || 'pagato',
+          invoiceNum: p.invoiceNum || '',
+          deductionTypeId,
+          bonificoParlante: !!p.bonificoParlante,
+          attachments: p.attachments || [],
+          note: p.note && p.description ? p.note : (p.description ? p.note : '')
+        };
+      });
+
+      // Tipi detrazione: combina default + custom da JSON (escludendo già i sistema/placeholder)
+      const importedDts = (data.deductionTypes || []).filter(t => !t.isPlaceholder && !t.isNone);
+      const finalDts = [...DEFAULT_DEDUCTION_TYPES];
+      for (const dt of importedDts) {
+        if (!finalDts.some(x => x.id === dt.id)) finalDts.push(dt);
+      }
+
+      await bulkPut('categories', cats);
+      await bulkPut('suppliers', sups);
+      await bulkPut('beneficiaries', bens);
+      await bulkPut('payments', pays);
+      await clearStore('deductionTypes');
+      await bulkPut('deductionTypes', finalDts);
+
+      await loadState();
+      renderAll();
+      showToast(`Import completato: ${pays.length} pagamenti, ${totAtt} allegati`);
+    } catch (err) {
+      console.error(err);
+      alert('Errore durante import: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// =========================================================================
+// EXPORT ZIP PER COMMERCIALISTA
+// =========================================================================
+function onExpPeriodChange() {
+  const sel = document.getElementById('exp-period').value;
+  document.getElementById('exp-custom-wrap').style.display = sel === 'custom' ? '' : 'none';
+  if (sel === 'custom') {
+    const today = new Date();
+    const from = document.getElementById('exp-from');
+    const to = document.getElementById('exp-to');
+    if (!from.value) from.value = new Date(today.getFullYear(), 0, 1).toISOString().slice(0,10);
+    if (!to.value) to.value = today.toISOString().slice(0,10);
+  }
+  updateExpPreview();
+}
+
+function getExpDateRange() {
+  const sel = document.getElementById('exp-period').value;
+  const today = new Date();
+  const Y = today.getFullYear();
+  if (sel === 'all') return { from: '0000-01-01', to: '9999-12-31', label: 'Tutto' };
+  if (sel === 'current') return { from: `${Y}-01-01`, to: `${Y}-12-31`, label: `Anno ${Y}` };
+  if (sel === 'previous') return { from: `${Y-1}-01-01`, to: `${Y-1}-12-31`, label: `Anno ${Y-1}` };
+  if (sel === 'custom') {
+    const f = document.getElementById('exp-from').value || '0000-01-01';
+    const t = document.getElementById('exp-to').value || '9999-12-31';
+    return { from: f, to: t, label: `${fmtDate(f)} → ${fmtDate(t)}` };
+  }
+  return { from: '0000-01-01', to: '9999-12-31', label: 'Tutto' };
+}
+
+function getExpFilteredPayments() {
+  const range = getExpDateRange();
+  const onlyDed = document.getElementById('exp-detraibili').checked;
+  const onlyPagati = document.getElementById('exp-pagati').checked;
+  return state.payments.filter(p => {
+    if (!p.date) return false;
+    if (p.date < range.from || p.date > range.to) return false;
+    if (onlyPagati && p.status !== 'pagato') return false;
+    if (onlyDed && !isDeductiblePayment(p)) return false;
+    return true;
+  });
+}
+
+function updateExpPreview() {
+  const el = document.getElementById('exp-preview');
+  if (!el) return;
+  const range = getExpDateRange();
+  const pays = getExpFilteredPayments();
+  const totLordo = pays.reduce((s,p) => s + grossOf(p), 0);
+  const totDed = pays.reduce((s,p) => s + paymentDeduction(p), 0);
+  const supIds = new Set(pays.map(p => p.supplierId).filter(Boolean));
+  const totAtt = pays.reduce((s,p) => s + ((p.attachments||[]).length), 0);
+  el.innerHTML = `<strong>Periodo:</strong> ${range.label}<br>
+    <strong>${pays.length}</strong> pagamenti · <strong>${supIds.size}</strong> fornitori · <strong>${totAtt}</strong> allegati<br>
+    Lordo: <strong>${euroR(totLordo)}</strong> · Detrazione: <strong style="color:var(--good);">${euroR(totDed)}</strong>`;
+}
+
+function sanitizeFilename(s) {
+  return String(s||'').replace(/[\/\\:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'senza-nome';
+}
+
+function dataURLtoBlob(dataURL) {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8 = new Uint8Array(n);
+  while (n--) u8[n] = bstr.charCodeAt(n);
+  return new Blob([u8], { type: mime });
+}
+
+function csvCell(v) {
+  if (v == null) return '';
+  const s = String(v);
+  if (s.includes('"') || s.includes(';') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+async function exportZIP() {
+  if (typeof JSZip === 'undefined') {
+    alert('JSZip non caricato. Verifica la connessione internet.');
+    return;
+  }
+  const range = getExpDateRange();
+  const pays = getExpFilteredPayments();
+  if (pays.length === 0) {
+    alert('Nessun pagamento da esportare con i filtri attuali.');
+    return;
+  }
+
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Generazione in corso…';
+
+  try {
+    const zip = new JSZip();
+    const rootName = `Budget-Ristrutturazione-${range.label.replace(/[^\w]/g,'_')}`;
+    const root = zip.folder(rootName);
+
+    // === RIEPILOGO GLOBALE ===
+    const totLordo = pays.reduce((s,p) => s + grossOf(p), 0);
+    const totImp = pays.reduce((s,p) => s + (Number(p.imponibile)||0), 0);
+    const totIva = pays.reduce((s,p) => s + ivaOf(p), 0);
+    const totDed = pays.reduce((s,p) => s + paymentDeduction(p), 0);
+    const supIds = [...new Set(pays.map(p => p.supplierId).filter(Boolean))];
+
+    // Aggregazione per tipo detrazione
+    const byDedType = {};
+    for (const p of pays) {
+      const dt = getDeductionType(p.deductionTypeId);
+      const key = dt ? dt.name : 'Senza tipo';
+      if (!byDedType[key]) byDedType[key] = { count: 0, lordo: 0, detraz: 0 };
+      byDedType[key].count++;
+      byDedType[key].lordo += grossOf(p);
+      byDedType[key].detraz += paymentDeduction(p);
+    }
+
+    // Aggregazione per beneficiario
+    const byBen = {};
+    for (const ben of state.beneficiaries) byBen[ben.id] = { name: ben.name, cf: ben.cf, irpef: ben.irpef||0, lordo: 0, detraz: 0 };
+    for (const p of pays) {
+      if (!isDeductiblePayment(p)) continue;
+      const dt = getDeductionType(p.deductionTypeId);
+      const lordo = grossOf(p);
+      for (const br of (p.beneficiaries||[])) {
+        if (!byBen[br.beneficiaryId]) continue;
+        const q = (Number(br.quota)||0)/100;
+        byBen[br.beneficiaryId].lordo += lordo * q;
+        byBen[br.beneficiaryId].detraz += lordo * (dt.rate/100) * q;
+      }
+    }
+
+    let riepilogo = `BUDGET RISTRUTTURAZIONE – RIEPILOGO PER COMMERCIALISTA
+Generato il ${new Date().toLocaleString('it-IT')}
+Periodo: ${range.label}
+
+============================================================
+TOTALI
+============================================================
+Pagamenti inclusi:        ${pays.length}
+Fornitori coinvolti:      ${supIds.length}
+Imponibile totale:        ${euro(totImp)}
+IVA totale:               ${euro(totIva)}
+Lordo totale:             ${euro(totLordo)}
+Detrazione recuperabile:  ${euro(totDed)}
+Rata annua (×10 anni):    ${euro(totDed/10)}
+
+Filtri applicati:
+  - Solo pagati:           ${document.getElementById('exp-pagati').checked ? 'Sì' : 'No'}
+  - Solo detraibili:       ${document.getElementById('exp-detraibili').checked ? 'Sì' : 'No'}
+
+============================================================
+SUDDIVISIONE PER TIPO DETRAZIONE
+============================================================
+`;
+    for (const [name, d] of Object.entries(byDedType).sort((a,b) => b[1].detraz - a[1].detraz)) {
+      riepilogo += `${name.padEnd(40)} ${String(d.count).padStart(4)} pag.  Lordo: ${euro(d.lordo).padStart(14)}  Detraz: ${euro(d.detraz).padStart(14)}\n`;
+    }
+
+    riepilogo += `\n============================================================\nDETRAZIONE PER BENEFICIARIO\n============================================================\n`;
+    for (const ben of Object.values(byBen)) {
+      if (ben.detraz === 0) continue;
+      const rata = ben.detraz / 10;
+      const recup = ben.irpef > 0 ? Math.min(rata, ben.irpef) : rata;
+      const incap = ben.irpef > 0 && rata > ben.irpef;
+      riepilogo += `\n${ben.name} (${ben.cf || 'CF non impostato'})
+  Lordo di competenza:      ${euro(ben.lordo)}
+  Detrazione totale:        ${euro(ben.detraz)}
+  Rata annua (×10):         ${euro(rata)}
+  IRPEF annua dichiarata:   ${ben.irpef > 0 ? euro(ben.irpef) : '— non impostata —'}
+  Recupero effettivo/anno:  ${euro(recup)}${incap ? '  ⚠ INCAPIENZA' : ''}
+  Recupero totale 10 anni:  ${euro(recup * 10)}
+`;
+    }
+
+    riepilogo += `\n============================================================\nELENCO FORNITORI\n============================================================\n`;
+    for (const sId of supIds) {
+      const sup = state.suppliers.find(s => s.id === sId);
+      const sPays = pays.filter(p => p.supplierId === sId);
+      const sLordo = sPays.reduce((s,p) => s + grossOf(p), 0);
+      riepilogo += `${(sup?sup.name:'???').padEnd(40)} P.IVA ${(sup?sup.piva:'—').padEnd(15)} ${String(sPays.length).padStart(3)} pag.  ${euro(sLordo).padStart(14)}\n`;
+    }
+
+    root.file('riepilogo-globale.txt', riepilogo);
+
+    // === CSV PAGAMENTI ===
+    const csvHeader = ['Data','Fornitore','P.IVA fornitore','Categoria','Descrizione','N. fattura','Imponibile','IVA %','IVA importo','Lordo','Tipo detrazione','Aliquota','Detrazione','Stato','Bonifico parlante','Beneficiari','Note'].map(csvCell).join(';');
+    const csvRows = [csvHeader];
+    for (const p of pays.slice().sort((a,b) => (a.date||'').localeCompare(b.date||''))) {
+      const sup = state.suppliers.find(s => s.id === p.supplierId);
+      const cat = state.categories.find(c => c.id === p.categoryId);
+      const dt = getDeductionType(p.deductionTypeId);
+      const benStr = (p.beneficiaries||[]).map(b => {
+        const ben = state.beneficiaries.find(x => x.id === b.beneficiaryId);
+        return `${ben?ben.name:'?'} ${b.quota}%`;
+      }).join(' | ');
+      const lordo = grossOf(p);
+      const iva = ivaOf(p);
+      const ded = paymentDeduction(p);
+      const row = [
+        fmtDate(p.date),
+        sup ? sup.name : '',
+        sup ? sup.piva : '',
+        cat ? cat.name : '',
+        p.description||'',
+        p.invoiceNum||'',
+        (Number(p.imponibile)||0).toFixed(2).replace('.', ','),
+        (Number(p.ivaPct)||0),
+        iva.toFixed(2).replace('.', ','),
+        lordo.toFixed(2).replace('.', ','),
+        dt ? dt.name : '',
+        dt ? (dt.rate + '%') : '',
+        ded.toFixed(2).replace('.', ','),
+        p.status||'',
+        p.bonificoParlante ? 'Sì' : 'No',
+        benStr,
+        p.note||''
+      ].map(csvCell).join(';');
+      csvRows.push(row);
+    }
+    // BOM UTF-8 per compatibilità Excel italiano
+    root.file('pagamenti.csv', '\ufeff' + csvRows.join('\n'));
+
+    // === ANAGRAFICA BENEFICIARI ===
+    let benTxt = `BENEFICIARI DETRAZIONE\nGenerato il ${new Date().toLocaleString('it-IT')}\n\n`;
+    for (const b of state.beneficiaries) {
+      benTxt += `Nome:               ${b.name}\nCodice fiscale:     ${b.cf||'—'}\nQuota proprietà:    ${b.quota||0}%\nIRPEF annua:        ${b.irpef>0?euro(b.irpef):'— non impostata —'}\nNote:               ${b.note||'—'}\n\n${'-'.repeat(60)}\n\n`;
+    }
+    root.file('beneficiari.txt', benTxt);
+
+    // === FORNITORI ===
+    const fornitoriRoot = root.folder('fornitori');
+    for (const sId of supIds) {
+      const sup = state.suppliers.find(s => s.id === sId);
+      if (!sup) continue;
+      const sPays = pays.filter(p => p.supplierId === sId).sort((a,b) => (a.date||'').localeCompare(b.date||''));
+      const folderName = sanitizeFilename(sup.name);
+      const supFolder = fornitoriRoot.folder(folderName);
+
+      // anagrafica.txt
+      const anagrafica = `${sup.name}
+${'='.repeat(sup.name.length)}
+
+P.IVA:           ${sup.piva || '—'}
+Codice fiscale:  ${sup.cf || '—'}
+Indirizzo:       ${sup.address || '—'}
+Email:           ${sup.email || '—'}
+Telefono:        ${sup.phone || '—'}
+IBAN:            ${sup.iban || '—'}
+Referente:       ${sup.contact || '—'}
+IVA default:     ${sup.defaultIva != null ? sup.defaultIva + '%' : '—'}
+
+Note: ${sup.note || '—'}
+`;
+      supFolder.file('anagrafica.txt', anagrafica);
+
+      // riepilogo-fornitore.txt
+      const sLordo = sPays.reduce((s,p) => s + grossOf(p), 0);
+      const sImp = sPays.reduce((s,p) => s + (Number(p.imponibile)||0), 0);
+      const sIva = sPays.reduce((s,p) => s + ivaOf(p), 0);
+      const sDed = sPays.reduce((s,p) => s + paymentDeduction(p), 0);
+      let supRiep = `RIEPILOGO PAGAMENTI – ${sup.name}
+Periodo: ${range.label}
+
+Totale pagamenti:    ${sPays.length}
+Imponibile:          ${euro(sImp)}
+IVA:                 ${euro(sIva)}
+Lordo:               ${euro(sLordo)}
+Detrazione:          ${euro(sDed)}
+
+${'='.repeat(60)}
+DETTAGLIO PAGAMENTI
+${'='.repeat(60)}
+
+`;
+      for (const p of sPays) {
+        const dt = getDeductionType(p.deductionTypeId);
+        const cat = state.categories.find(c => c.id === p.categoryId);
+        supRiep += `[${fmtDate(p.date)}] ${p.description||'—'}
+  Categoria:        ${cat ? cat.name : '—'}
+  N. fattura:       ${p.invoiceNum || '—'}
+  Imponibile:       ${euro(p.imponibile)}
+  IVA:              ${p.ivaPct}% = ${euro(ivaOf(p))}
+  Lordo:            ${euro(grossOf(p))}
+  Tipo detrazione:  ${dt ? dt.name : '—'}${dt && dt.rate>0 ? ` (${dt.rate}%)` : ''}
+  Detrazione:       ${euro(paymentDeduction(p))}
+  Stato:            ${p.status || '—'}
+  Bonifico parl.:   ${p.bonificoParlante ? 'Sì' : 'NO ⚠'}
+`;
+        if (p.beneficiaries && p.beneficiaries.length) {
+          const benStr = p.beneficiaries.map(b => {
+            const ben = state.beneficiaries.find(x => x.id === b.beneficiaryId);
+            return `${ben?ben.name:'?'} ${b.quota}%`;
+          }).join(', ');
+          supRiep += `  Beneficiari:      ${benStr}\n`;
+        }
+        if (p.note) supRiep += `  Note:             ${p.note}\n`;
+        if (p.attachments && p.attachments.length) {
+          supRiep += `  Allegati:         ${p.attachments.map(a => a.name).join(', ')}\n`;
+        }
+        supRiep += `\n`;
+      }
+      supFolder.file('riepilogo-fornitore.txt', supRiep);
+
+      // Allegati con prefisso data + descrizione
+      const fileNameCounts = {};
+      for (const p of sPays) {
+        const datePrefix = (p.date || 'data-sconosciuta').replace(/-/g, '');
+        const descSlug = sanitizeFilename(p.description || 'pag').slice(0, 40);
+        for (const att of (p.attachments||[])) {
+          // estrazione estensione
+          const m = att.name.match(/\.([a-zA-Z0-9]+)$/);
+          const ext = m ? m[1] : 'bin';
+          const baseName = sanitizeFilename(att.name.replace(/\.[a-zA-Z0-9]+$/, ''));
+          let finalName = `${datePrefix}_${descSlug}_${baseName}.${ext}`;
+          // gestione collisioni
+          if (fileNameCounts[finalName]) {
+            fileNameCounts[finalName]++;
+            finalName = finalName.replace(/\.([^.]+)$/, `_${fileNameCounts[finalName]}.$1`);
+          } else {
+            fileNameCounts[finalName] = 1;
+          }
+          try {
+            const blob = dataURLtoBlob(att.data);
+            supFolder.file(finalName, blob);
+          } catch (err) {
+            console.warn('Allegato non leggibile:', att.name, err);
+          }
+        }
+      }
+    }
+
+    // === GENERA ZIP ===
+    btn.textContent = 'Compressione…';
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 5 } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${rootName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`ZIP generato: ${pays.length} pagamenti, ${supIds.length} fornitori`);
+  } catch (err) {
+    console.error(err);
+    alert('Errore durante la generazione del ZIP: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function resetAll() {
+  if (!confirm('Cancellare TUTTI i dati? Irreversibile.')) return;
+  if (!confirm('Sei sicuro? Conferma di nuovo.')) return;
+  for (const s of STORES) await clearStore(s);
+  await bulkPut('deductionTypes', DEFAULT_DEDUCTION_TYPES);
+  state = { categories: [], suppliers: [], beneficiaries: [], payments: [], deductionTypes: DEFAULT_DEDUCTION_TYPES.slice() };
+  renderAll();
+  showToast('Tutto cancellato');
+}
+
+async function renderStorageInfo() {
+  const el = document.getElementById('storage-info');
+  if (!el) return;
+  if (navigator.storage && navigator.storage.estimate) {
+    try {
+      const e = await navigator.storage.estimate();
+      const usedMB = (e.usage / 1024 / 1024).toFixed(1);
+      const totMB = (e.quota / 1024 / 1024).toFixed(0);
+      const totAtt = state.payments.reduce((s,p) => s + ((p.attachments||[]).length), 0);
+      el.textContent = `Spazio usato: ${usedMB} MB su ~${totMB} MB disponibili. ${state.payments.length} pagamenti, ${totAtt} allegati.`;
+    } catch { el.textContent = 'Storage info non disponibile'; }
+  } else {
+    el.textContent = 'Storage info non disponibile su questo dispositivo.';
+  }
+}
+
+// =========================================================================
+// INIT
+// =========================================================================
+(async () => {
+  try {
+    await openDB();
+    await loadState();
+    renderAll();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('dash-content').innerHTML = `<div class="card" style="background: var(--bad-soft); color: var(--bad);"><strong>Errore inizializzazione:</strong><br>${err.message}<br><br>IndexedDB non è disponibile o c'è un problema col database.</div>`;
+  }
+})();
+
+</script>
+</body>
+</html>
